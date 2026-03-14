@@ -282,8 +282,8 @@
       "Materialized Views support APPLY CHANGES INTO; Streaming Tables do not",
       "There is no functional difference — they are interchangeable"
     ],
-    "correct": 1,
-    "explanation": "Streaming Tables process new data incrementally, making them efficient for append-only sources like Auto Loader. Materialized Views fully recompute their results on each pipeline run, making them suitable for aggregations or queries on data that can change (updates/deletes)."
+    "correct": 2,
+    "explanation": "Materialized Views support APPLY CHANGES INTO, which allows them to maintain Slowly Changing Dimensions (SCD) and handle updates/deletes efficiently. Streaming Tables are optimized for incremental processing of append-only sources but do not support APPLY CHANGES INTO."
   },
   {
     "id": 23,
