@@ -38,6 +38,7 @@ export default function DatabricksQuiz() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
+  const [difficulty, setDifficulty] = useState(null); // null, "easy", "hard"
   const [quizStarted, setQuizStarted] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -54,19 +55,27 @@ export default function DatabricksQuiz() {
         const session = JSON.parse(savedSession);
         setIsAuthenticated(session.isAuthenticated);
         if (session.isAuthenticated) {
-          setQuizStarted(session.quizStarted);
-          setCurrentQ(session.currentQ);
-          setSelected(session.selected);
-          setShowResult(session.showResult);
-          setScore(session.score);
-          setAnswered(session.answered);
-          setQuizComplete(session.quizComplete);
-          if (session.parsedQuestions && session.parsedQuestions.length > 0) {
-            setParsedQuestions(session.parsedQuestions);
+          // Carica difficulty se è settato e il quiz è iniziato
+          if (session.difficulty && session.quizStarted) {
+            setDifficulty(session.difficulty);
+            setQuizStarted(session.quizStarted);
+            setCurrentQ(session.currentQ);
+            setSelected(session.selected);
+            setShowResult(session.showResult);
+            setScore(session.score);
+            setAnswered(session.answered);
+            setQuizComplete(session.quizComplete);
+            if (session.parsedQuestions && session.parsedQuestions.length > 0) {
+              setParsedQuestions(session.parsedQuestions);
+            }
+          } else if (session.difficulty && !session.quizStarted) {
+            // Carica difficulty anche se il quiz non è iniziato ma la difficoltà era stata scelta
+            setDifficulty(session.difficulty);
           }
         }
       } catch (e) {
         // Sessione invalida
+        localStorage.removeItem("quizSession");
       }
     }
   }, []);
@@ -76,6 +85,7 @@ export default function DatabricksQuiz() {
     if (isAuthenticated) {
       const session = {
         isAuthenticated,
+        difficulty,
         quizStarted,
         currentQ,
         selected,
@@ -93,6 +103,7 @@ export default function DatabricksQuiz() {
     saveSession();
   }, [
     isAuthenticated,
+    difficulty,
     quizStarted,
     currentQ,
     selected,
@@ -131,12 +142,20 @@ export default function DatabricksQuiz() {
   };
 
   useEffect(() => {
-    // Se la sessione ha già domande salvate, non ricaricare da JSON
+    // Resetta le domande quando cambia difficoltà
+    if (difficulty) {
+      setParsedQuestions([]);
+    }
+  }, [difficulty]);
+
+  useEffect(() => {
+    // Se la sessione ha già domande salvate e sono della difficoltà giusta, non ricaricare da JSON
     const savedSession = localStorage.getItem("quizSession");
-    if (savedSession) {
+    if (savedSession && difficulty) {
       try {
         const session = JSON.parse(savedSession);
-        if (session.parsedQuestions && session.parsedQuestions.length > 0) {
+        if (session.difficulty === difficulty && session.parsedQuestions && session.parsedQuestions.length > 0) {
+          setParsedQuestions(session.parsedQuestions);
           return; // Domande già caricate dalla sessione
         }
       } catch (e) {
@@ -144,12 +163,13 @@ export default function DatabricksQuiz() {
       }
     }
 
-    if (parsedQuestions.length > 0) return;
+    if (parsedQuestions.length > 0 || !difficulty) return;
 
+    const fileName = difficulty === "easy" ? "question_easy.json" : "question.json";
     const jsonUrl =
       typeof import.meta !== "undefined" && import.meta.url
-        ? new URL("../question.json", import.meta.url).href
-        : "/question.json";
+        ? new URL(`../${fileName}`, import.meta.url).href
+        : `/${fileName}`;
 
     fetch(jsonUrl)
       .then((res) => res.json())
@@ -169,20 +189,9 @@ export default function DatabricksQuiz() {
       .catch(() => {
         // keep defaults
       });
-  }, []);
+  }, [difficulty]);
 
   const q = activeQuestions[currentQ];
-
-  // Show loading state if no questions are loaded yet
-  if (!parsedQuestions.length) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400">Caricamento domande...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
@@ -218,6 +227,55 @@ export default function DatabricksQuiz() {
               Reset Dati
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show difficulty selection if authenticated but difficulty not selected
+  if (isAuthenticated && !difficulty) {
+    return (
+      <div className="min-h-screen bg-gray-900 p-6 flex items-center justify-center">
+        <div className="max-w-2xl mx-auto text-center w-full">
+          <div className="flex justify-end mb-4">
+            <LogoutButton onClick={handleLogout} />
+          </div>
+          <div className="flex justify-center mb-8">
+            <img
+              src={DatabricksLogo}
+              alt="Databricks"
+              className="h-16 object-contain"
+            />
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-6">Scegli Difficoltà</h1>
+          <p className="text-gray-300 mb-8">
+            Seleziona il livello di difficoltà del quiz
+          </p>
+          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+            <button
+              onClick={() => setDifficulty("easy")}
+              className="px-6 py-4 bg-green-600 text-white rounded-lg font-bold text-lg hover:bg-green-700 transition"
+            >
+              Facile 🟢
+            </button>
+            <button
+              onClick={() => setDifficulty("hard")}
+              className="px-6 py-4 bg-red-600 text-white rounded-lg font-bold text-lg hover:bg-red-700 transition"
+            >
+              Difficile 🔴
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state if questions are being loaded
+  if (!parsedQuestions.length && isAuthenticated && difficulty) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400">Caricamento domande...</p>
         </div>
       </div>
     );
@@ -492,7 +550,7 @@ export default function DatabricksQuiz() {
                   key={idx}
                   onClick={() => handleSelect(idx)}
                   disabled={showResult}
-                  className={`w-full text-left p-4 rounded-lg transition text-white ${optClass}`}
+                  className={`w-full text-left p-4 rounded-lg transition text-white break-words whitespace-normal ${optClass}`}
                 >
                   <span className="font-medium mr-3 text-gray-400">
                     {String.fromCharCode(65 + idx)}.

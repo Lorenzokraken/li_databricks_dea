@@ -1,0 +1,652 @@
+[
+  {
+    "id": 1,
+    "category": "Databricks Platform",
+    "question": "Which of the following best describes the Lakehouse architecture in Databricks?",
+    "options": [
+      "A data warehouse that stores only structured data with ACID transactions",
+      "A combination of data lake flexibility and data warehouse reliability built on open storage formats",
+      "A cloud object storage system with built-in query capabilities",
+      "A streaming platform for real-time data processing"
+    ],
+    "correct": 1,
+    "explanation": "The Lakehouse combines the scalability and flexibility of data lakes with the data management and ACID reliability of data warehouses, built on open formats like Delta Lake stored in cloud object storage."
+  },
+  {
+    "id": 2,
+    "category": "Databricks Platform",
+    "question": "What is the primary purpose of the Databricks Unity Catalog?",
+    "options": [
+      "To manage cluster configurations across workspaces",
+      "To provide a unified governance layer for data and AI assets across workspaces",
+      "To store Delta tables in a centralized cloud location",
+      "To schedule and monitor Databricks Jobs"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog provides centralized governance, fine-grained access control, data lineage, and auditing for all data and AI assets across multiple Databricks workspaces within an account."
+  },
+  {
+    "id": 3,
+    "category": "Databricks Platform",
+    "question": "Which compute type is recommended for interactive data exploration and development in Databricks?",
+    "options": [
+      "Job clusters",
+      "SQL Warehouses",
+      "All-purpose clusters",
+      "Serverless pipelines"
+    ],
+    "correct": 2,
+    "explanation": "All-purpose (interactive) clusters are designed for collaborative, interactive development in notebooks. Job clusters are optimized for automated job runs and are terminated after the job completes."
+  },
+  {
+    "id": 4,
+    "category": "Databricks Platform",
+    "question": "A data engineer needs to run an ad-hoc SQL query on a Delta table. Which compute option is MOST appropriate?",
+    "options": [
+      "An all-purpose cluster with a notebook",
+      "A Databricks SQL Warehouse",
+      "A job cluster with a SQL task",
+      "A DLT pipeline in development mode"
+    ],
+    "correct": 1,
+    "explanation": "Databricks SQL Warehouses are purpose-built for SQL analytics workloads. They offer fast startup, result caching, and a SQL editor interface optimized for ad-hoc queries."
+  },
+  {
+    "id": 5,
+    "category": "Databricks Platform",
+    "question": "What is the three-level namespace in Unity Catalog?",
+    "options": [
+      "Workspace > Database > Table",
+      "Catalog > Schema > Table",
+      "Metastore > Catalog > Table",
+      "Account > Workspace > Table"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog organizes data using a three-level namespace: Catalog > Schema (Database) > Table (or View). This is referenced as catalog_name.schema_name.table_name in SQL."
+  },
+  {
+    "id": 6,
+    "category": "Development & Ingestion",
+    "question": "Which Databricks feature is designed to incrementally ingest new files from cloud storage into a Delta table?",
+    "options": [
+      "Delta Live Tables APPLY CHANGES INTO",
+      "Auto Loader (cloudFiles)",
+      "COPY INTO",
+      "Structured Streaming with kafka source"
+    ],
+    "correct": 1,
+    "explanation": "Auto Loader (cloudFiles source) is designed for incremental, scalable file ingestion from cloud storage. It tracks processed files via a checkpoint and supports schema inference and evolution."
+  },
+  {
+    "id": 7,
+    "category": "Development & Ingestion",
+    "question": "What is the key advantage of Auto Loader over COPY INTO for large-scale file ingestion?",
+    "options": [
+      "Auto Loader supports more file formats than COPY INTO",
+      "Auto Loader uses file notifications to scale to billions of files without listing the entire directory",
+      "Auto Loader writes directly to Parquet while COPY INTO only writes to Delta",
+      "Auto Loader does not require a checkpoint location"
+    ],
+    "correct": 1,
+    "explanation": "Auto Loader in file notification mode subscribes to cloud storage events (e.g., S3 SQS, Azure Event Grid) to discover new files without scanning the entire directory. This scales efficiently to billions of files, unlike COPY INTO which lists the directory on every run."
+  },
+  {
+    "id": 8,
+    "category": "Development & Ingestion",
+    "question": "A data engineer wants to ingest JSON files with an unknown schema into a Delta table using Auto Loader. Which option enables automatic schema inference?",
+    "options": [
+      "cloudFiles.schemaLocation with cloudFiles.inferColumnTypes = true",
+      "cloudFiles.autoSchema = true",
+      "mergeSchema = true",
+      "cloudFiles.format = 'json' is sufficient — schema is always inferred"
+    ],
+    "correct": 0,
+    "explanation": "Auto Loader infers the schema from the source files when schemaLocation is specified. The inferred schema is stored at schemaLocation and reused on subsequent runs. inferColumnTypes = true enables type inference beyond the default string type."
+  },
+  {
+    "id": 9,
+    "category": "Development & Ingestion",
+    "question": "What does the cloudFiles.schemaEvolutionMode = 'addNewColumns' setting do in Auto Loader?",
+    "options": [
+      "It drops columns that no longer appear in new files",
+      "It automatically adds new columns found in incoming files to the target Delta table",
+      "It raises an error when a new column is detected",
+      "It casts all new columns to StringType regardless of their actual type"
+    ],
+    "correct": 1,
+    "explanation": "With addNewColumns mode, Auto Loader detects new columns in incoming files and automatically evolves the target Delta table schema to include them. This allows hands-off schema management for evolving sources."
+  },
+  {
+    "id": 10,
+    "category": "Development & Ingestion",
+    "question": "Which statement about COPY INTO is correct?",
+    "options": [
+      "COPY INTO reprocesses all files on every run, making it idempotent by design",
+      "COPY INTO tracks processed files and skips them on subsequent runs",
+      "COPY INTO only supports Parquet and CSV formats",
+      "COPY INTO does not support writing to Delta tables"
+    ],
+    "correct": 1,
+    "explanation": "COPY INTO is idempotent and tracks which files have already been loaded. Re-running COPY INTO only processes new files that have not yet been ingested. This makes it safe to run repeatedly without duplicating data."
+  },
+  {
+    "id": 11,
+    "category": "Data Processing",
+    "question": "Which Delta Lake feature ensures that reads and writes to a Delta table are ACID compliant?",
+    "options": [
+      "The Parquet columnar format",
+      "The Delta transaction log (_delta_log)",
+      "The cloud object storage replication",
+      "Spark's in-memory processing engine"
+    ],
+    "correct": 1,
+    "explanation": "Delta Lake uses a transaction log (_delta_log) to record all changes to a table. This log enables ACID transactions, atomic writes, concurrent reads/writes, and table versioning (time travel)."
+  },
+  {
+    "id": 12,
+    "category": "Data Processing",
+    "question": "A data engineer wants to query the state of a Delta table as it was 2 days ago. Which SQL syntax is correct?",
+    "options": [
+      "SELECT * FROM table VERSION AS OF -2",
+      "SELECT * FROM table TIMESTAMP AS OF date_sub(current_timestamp(), 2)",
+      "SELECT * FROM table RESTORE TO date_sub(current_date(), 2)",
+      "SELECT * FROM table HISTORY WHERE days_ago = 2"
+    ],
+    "correct": 1,
+    "explanation": "Delta Lake time travel supports TIMESTAMP AS OF to query historical data. The syntax SELECT * FROM table TIMESTAMP AS OF '<timestamp>' or using a timestamp expression queries the table as it existed at that point in time."
+  },
+  {
+    "id": 13,
+    "category": "Data Processing",
+    "question": "What is the purpose of running OPTIMIZE on a Delta table?",
+    "options": [
+      "To update table statistics used by the query optimizer",
+      "To compact small files into larger files for improved read performance",
+      "To remove deleted rows from data files",
+      "To rebuild the transaction log from scratch"
+    ],
+    "correct": 1,
+    "explanation": "OPTIMIZE compacts small Delta files into larger, more efficiently sized files. This reduces the number of files Spark reads, improving scan performance. It optionally supports ZORDER to colocate related data within files for better data skipping."
+  },
+  {
+    "id": 14,
+    "category": "Data Processing",
+    "question": "What does ZORDER BY in a Delta OPTIMIZE command do?",
+    "options": [
+      "It partitions the table by the specified column",
+      "It sorts the entire table alphabetically by the specified column",
+      "It colocates related data within files to improve data skipping for filters on those columns",
+      "It creates an index on the specified column for faster lookups"
+    ],
+    "correct": 2,
+    "explanation": "ZORDER colocates related data by the specified columns within data files, using multi-dimensional clustering. This allows Delta's data skipping to eliminate more files when queries filter on those columns, reducing I/O."
+  },
+  {
+    "id": 15,
+    "category": "Data Processing",
+    "question": "A Delta table has been written to many times with small batches, resulting in thousands of small files. Which command removes old unreferenced data files to free storage?",
+    "options": [
+      "OPTIMIZE",
+      "VACUUM",
+      "FSCK REPAIR TABLE",
+      "DELETE FROM table WHERE _commit_timestamp < current_date()"
+    ],
+    "correct": 1,
+    "explanation": "VACUUM removes data files that are no longer referenced by the Delta transaction log and are older than the retention threshold (default 7 days). This reclaims cloud storage but also removes the ability to time travel to versions older than the retention period."
+  },
+  {
+    "id": 16,
+    "category": "Data Processing",
+    "question": "Which Spark operation should be used to perform an upsert (update existing rows, insert new rows) into a Delta table?",
+    "options": [
+      "INSERT OVERWRITE",
+      "MERGE INTO",
+      "UPDATE with fallback INSERT",
+      "REPLACE INTO"
+    ],
+    "correct": 1,
+    "explanation": "MERGE INTO (also available as DeltaTable.merge() in Python) performs upserts: it matches source rows to target rows on a key, updates matches, inserts non-matches, and optionally deletes. It is the standard SCD Type 1 pattern for Delta tables."
+  },
+  {
+    "id": 17,
+    "category": "Data Processing",
+    "question": "What is the Medallion Architecture?",
+    "options": [
+      "A security framework for applying row and column level access controls",
+      "A layered data organization pattern with Bronze (raw), Silver (cleaned), and Gold (aggregated) layers",
+      "A Databricks-specific storage format for optimizing Delta queries",
+      "A CI/CD pattern for deploying Databricks notebooks"
+    ],
+    "correct": 1,
+    "explanation": "The Medallion Architecture organizes data into three quality layers: Bronze (raw ingested data), Silver (cleaned, deduplicated, enriched data), and Gold (business-level aggregations and metrics). Each layer adds progressively more structure and quality."
+  },
+  {
+    "id": 18,
+    "category": "Data Processing",
+    "question": "A data engineer runs a Spark job that produces 1 output file per partition. The job has 200 partitions resulting in 200 small files. Which Delta table property helps address this automatically?",
+    "options": [
+      "delta.autoOptimize.optimizeWrite = true",
+      "delta.minFileSize = 128MB",
+      "spark.sql.shuffle.partitions = 1",
+      "delta.targetFileSize = 128MB"
+    ],
+    "correct": 0,
+    "explanation": "delta.autoOptimize.optimizeWrite (or spark.databricks.delta.optimizeWrite.enabled) automatically coalesces small output files during write operations, producing fewer, larger files without requiring explicit repartitioning."
+  },
+  {
+    "id": 19,
+    "category": "Data Processing",
+    "question": "Which statement about Delta Lake schema enforcement is correct?",
+    "options": [
+      "Delta Lake allows writing data with extra columns not in the table schema by default",
+      "Delta Lake rejects writes where the DataFrame schema does not match the table schema by default",
+      "Delta Lake only enforces schema on read, not on write",
+      "Schema enforcement must be explicitly enabled with a table property"
+    ],
+    "correct": 1,
+    "explanation": "Delta Lake enforces schema on write by default. If the DataFrame has columns not present in the table schema or incompatible types, the write is rejected. To add new columns, you must use mergeSchema = true or ALTER TABLE ADD COLUMNS."
+  },
+  {
+    "id": 20,
+    "category": "Data Processing",
+    "question": "A data engineer needs to enable schema evolution when writing to a Delta table in a Spark DataFrame write. Which option is correct?",
+    "options": [
+      ".option('overwriteSchema', 'true')",
+      ".option('mergeSchema', 'true')",
+      ".option('evolveSchema', 'true')",
+      ".option('schemaEvolution', 'enabled')"
+    ],
+    "correct": 1,
+    "explanation": "The mergeSchema option allows adding new columns to the target Delta table during a write operation. The write succeeds and the table schema is evolved to include the new columns. overwriteSchema replaces the entire schema (destructive)."
+  },
+  {
+    "id": 21,
+    "category": "DLT / Lakeflow",
+    "question": "What is Delta Live Tables (DLT)?",
+    "options": [
+      "A managed framework for declaring data transformation pipelines with automatic infrastructure management and data quality monitoring",
+      "A real-time streaming engine that replaces Structured Streaming",
+      "A visualization tool for Delta table lineage",
+      "A CI/CD framework for deploying Delta tables"
+    ],
+    "correct": 0,
+    "explanation": "DLT (now called Lakeflow Pipelines) is a declarative framework where engineers define transformations using @dlt.table decorators or SQL. Databricks manages orchestration, dependency resolution, infrastructure, retries, and data quality monitoring automatically."
+  },
+  {
+    "id": 22,
+    "category": "DLT / Lakeflow",
+    "question": "What is the difference between a DLT Streaming Table and a DLT Materialized View?",
+    "options": [
+      "Streaming Tables support SQL; Materialized Views only support Python",
+      "Streaming Tables process data incrementally from append-only sources; Materialized Views are fully recomputed on each run",
+      "Materialized Views support APPLY CHANGES INTO; Streaming Tables do not",
+      "There is no functional difference — they are interchangeable"
+    ],
+    "correct": 1,
+    "explanation": "Streaming Tables process new data incrementally, making them efficient for append-only sources like Auto Loader. Materialized Views fully recompute their results on each pipeline run, making them suitable for aggregations or queries on data that can change (updates/deletes)."
+  },
+  {
+    "id": 23,
+    "category": "DLT / Lakeflow",
+    "question": "Which DLT expectation drops rows that violate the constraint while allowing the pipeline to continue?",
+    "options": [
+      "CONSTRAINT name EXPECT (condition) ON VIOLATION FAIL UPDATE",
+      "CONSTRAINT name EXPECT (condition) ON VIOLATION DROP ROW",
+      "CONSTRAINT name EXPECT (condition) ON VIOLATION WARN",
+      "CONSTRAINT name EXPECT (condition)"
+    ],
+    "correct": 1,
+    "explanation": "ON VIOLATION DROP ROW silently removes records that fail the constraint and continues the pipeline run. ON VIOLATION FAIL UPDATE halts the pipeline. The bare EXPECT (no ON VIOLATION clause) logs violations as metrics but keeps all rows."
+  },
+  {
+    "id": 24,
+    "category": "DLT / Lakeflow",
+    "question": "What does APPLY CHANGES INTO do in a DLT pipeline?",
+    "options": [
+      "It applies schema changes from the source to the target table automatically",
+      "It processes CDC (Change Data Capture) events to maintain an up-to-date target table",
+      "It applies OPTIMIZE and VACUUM to the target table after each run",
+      "It merges two DLT pipelines into a single unified pipeline"
+    ],
+    "correct": 1,
+    "explanation": "APPLY CHANGES INTO processes CDC events (inserts, updates, deletes) and applies them to a target table, maintaining current state. It handles ordering via SEQUENCE BY and supports SCD Type 1 and Type 2 patterns."
+  },
+  {
+    "id": 25,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline is in Development mode. What is a key behavior difference from Production mode?",
+    "options": [
+      "Development mode enforces data quality constraints; Production mode does not",
+      "Development mode keeps the cluster running after failure to enable debugging",
+      "Development mode runs on serverless compute; Production mode uses job clusters",
+      "Development mode processes data in batch; Production mode processes in streaming"
+    ],
+    "correct": 1,
+    "explanation": "In Development mode, the DLT cluster stays alive after a pipeline failure, allowing engineers to interactively debug. In Production mode, the cluster is terminated on failure to minimize cost. Both modes enforce data quality constraints identically."
+  },
+  {
+    "id": 26,
+    "category": "DLT / Lakeflow",
+    "question": "Where can a data engineer view data quality metrics (rows passed/failed per constraint) for a DLT pipeline?",
+    "options": [
+      "The Spark UI under the SQL tab",
+      "The DLT pipeline UI event log and data quality tab",
+      "The Delta transaction log of the target table",
+      "The cluster driver logs"
+    ],
+    "correct": 1,
+    "explanation": "DLT natively captures data quality metrics per constraint (records passed, failed, dropped) and displays them in the pipeline UI's event log and Data Quality tab. These metrics are also queryable via the event_log() function."
+  },
+  {
+    "id": 27,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline has tables A → B → C (chain of dependencies). Which statement about pipeline execution is correct?",
+    "options": [
+      "Tables are updated in alphabetical order regardless of dependencies",
+      "Databricks resolves the dependency graph and updates tables in the correct order automatically",
+      "All tables are updated in parallel simultaneously",
+      "The engineer must manually specify execution order using pipeline.run_order"
+    ],
+    "correct": 1,
+    "explanation": "DLT automatically analyzes the dependency graph defined by table references and executes updates in the correct topological order. Engineers declare WHAT to compute, not HOW or WHEN — Databricks manages orchestration."
+  },
+  {
+    "id": 28,
+    "category": "Productionizing Pipelines",
+    "question": "What are Databricks Asset Bundles (DABs)?",
+    "options": [
+      "A packaging format for Python libraries used in Databricks jobs",
+      "A CI/CD framework that defines Databricks resources (jobs, pipelines, clusters) as code in YAML",
+      "A set of pre-built notebook templates for common data engineering patterns",
+      "A Delta table format for bundling related datasets together"
+    ],
+    "correct": 1,
+    "explanation": "Databricks Asset Bundles (DABs) allow defining Databricks resources (jobs, DLT pipelines, clusters, etc.) as code in a databricks.yml file. This enables version-controlled, repeatable deployments across environments (dev, staging, prod) using CI/CD pipelines."
+  },
+  {
+    "id": 29,
+    "category": "Productionizing Pipelines",
+    "question": "What is the root configuration file for a Databricks Asset Bundle?",
+    "options": [
+      "bundle.json",
+      "databricks.yml",
+      "dab_config.yaml",
+      "resources.yml"
+    ],
+    "correct": 1,
+    "explanation": "databricks.yml is the root configuration file for a DAB. It defines the bundle name, workspace targets (dev, staging, prod), resources (jobs, pipelines), and variables. The CLI uses this file for all bundle operations."
+  },
+  {
+    "id": 30,
+    "category": "Productionizing Pipelines",
+    "question": "Which command deploys a Databricks Asset Bundle to the production target?",
+    "options": [
+      "databricks bundle publish --target prod",
+      "databricks bundle deploy --target prod",
+      "databricks bundle apply --env prod",
+      "databricks bundle push prod"
+    ],
+    "correct": 1,
+    "explanation": "databricks bundle deploy --target <target_name> deploys all resources defined in the bundle to the specified target workspace. It creates or updates jobs, pipelines, and other resources as defined in databricks.yml."
+  },
+  {
+    "id": 31,
+    "category": "Productionizing Pipelines",
+    "question": "How does Spark's Adaptive Query Execution (AQE) improve job performance?",
+    "options": [
+      "AQE pre-compiles query plans before job submission to reduce startup time",
+      "AQE dynamically optimizes query plans at runtime based on actual data statistics",
+      "AQE automatically scales the cluster during job execution",
+      "AQE caches intermediate results to speed up repeated queries"
+    ],
+    "correct": 1,
+    "explanation": "AQE re-optimizes query plans at runtime using actual shuffle statistics. Key optimizations include: dynamically coalescing small shuffle partitions, converting sort-merge joins to broadcast joins when one side is small, and splitting skewed partitions."
+  },
+  {
+    "id": 32,
+    "category": "Productionizing Pipelines",
+    "question": "A Databricks Job has tasks A, B, and C where B depends on A and C depends on B. Task A succeeds, Task B fails. What is the status of Task C?",
+    "options": [
+      "Task C runs using the last successful output of Task B",
+      "Task C is skipped because its dependency (Task B) failed",
+      "Task C runs independently since it was not directly involved in the failure",
+      "Task C fails with the same error as Task B"
+    ],
+    "correct": 1,
+    "explanation": "Databricks Jobs respects task dependencies. If Task B fails, Task C (which depends on B) is skipped. The job overall is marked as FAILED. Using Repair Run, you can rerun from Task B onwards without rerunning Task A."
+  },
+  {
+    "id": 33,
+    "category": "Productionizing Pipelines",
+    "question": "What does the Spark UI Stages tab show that is most useful for diagnosing job performance issues?",
+    "options": [
+      "The cluster's memory and CPU utilization over time",
+      "Task execution times, shuffle read/write sizes, and spill metrics per stage",
+      "The Delta transaction log entries generated by the job",
+      "The number of files read and written per task"
+    ],
+    "correct": 1,
+    "explanation": "The Spark UI Stages tab shows per-stage and per-task metrics including duration, input/output sizes, shuffle read/write volumes, and spill to disk. These metrics are essential for identifying bottlenecks like data skew, excessive shuffles, and memory pressure."
+  },
+  {
+    "id": 34,
+    "category": "Productionizing Pipelines",
+    "question": "A Databricks Job is configured to send an email notification on failure. The job fails. The engineer receives no email. What is the most likely cause?",
+    "options": [
+      "Email notifications only work for jobs triggered via the REST API, not the UI",
+      "The email address was not correctly configured in the job's notification settings",
+      "Email notifications require a paid Databricks support tier",
+      "Notifications are disabled by default and must be enabled at the workspace level"
+    ],
+    "correct": 1,
+    "explanation": "The most common reason for missing job failure notifications is that the email address was not added to the job's notification settings, or the wrong event type was selected. Always verify the notification configuration includes the correct email and the 'On failure' trigger."
+  },
+  {
+    "id": 35,
+    "category": "Productionizing Pipelines",
+    "question": "Which Databricks feature allows parameterizing jobs to run with different values per environment (dev, staging, prod)?",
+    "options": [
+      "Job parameters passed via the REST API or job UI",
+      "Notebook widgets with environment-specific default values",
+      "Databricks Asset Bundle variables with target-level overrides",
+      "Both A and C are valid approaches"
+    ],
+    "correct": 3,
+    "explanation": "Both job parameters (passed at runtime via API or UI) and DAB variables (defined in databricks.yml with target-level overrides) are valid ways to parameterize jobs per environment. DABs are preferred for structured CI/CD workflows; job parameters are useful for runtime flexibility."
+  },
+  {
+    "id": 36,
+    "category": "Data Governance",
+    "question": "In Unity Catalog, what does the USAGE privilege allow on a schema?",
+    "options": [
+      "The ability to create tables and views within the schema",
+      "The ability to query all tables within the schema",
+      "The ability to traverse the namespace to access objects within the schema",
+      "The ability to modify schema properties"
+    ],
+    "correct": 2,
+    "explanation": "USAGE on a schema (and catalog) is a traversal privilege — it allows users to 'see' and navigate the namespace. It does not grant the ability to read data. To query a table, a user needs USAGE on both the catalog and schema, PLUS SELECT on the table."
+  },
+  {
+    "id": 37,
+    "category": "Data Governance",
+    "question": "What is the difference between a managed table and an external table in Unity Catalog?",
+    "options": [
+      "Managed tables support ACID transactions; external tables do not",
+      "Dropping a managed table deletes both metadata and data files; dropping an external table only removes metadata",
+      "External tables can only be created in the default catalog",
+      "Managed tables are stored in Delta format; external tables must be Parquet"
+    ],
+    "correct": 1,
+    "explanation": "For managed tables, Databricks controls both the metadata (catalog entry) and the data files (stored in Unity Catalog managed storage). Dropping a managed table deletes everything. For external tables, Databricks only manages the metadata — dropping it leaves data files untouched."
+  },
+  {
+    "id": 38,
+    "category": "Data Governance",
+    "question": "A data engineer needs to allow a group of analysts to read a Delta table but prevent them from seeing a column containing PII (Social Security Numbers). Which Unity Catalog feature should be used?",
+    "options": [
+      "Row filters",
+      "Column masks",
+      "Dynamic views",
+      "Table ACLs"
+    ],
+    "correct": 1,
+    "explanation": "Column masks apply a masking function to a specific column, transforming the values returned to unauthorized users (e.g., returning NULL, hashed, or partially redacted values). Row filters control which rows users can see. Both are Unity Catalog governance features."
+  },
+  {
+    "id": 39,
+    "category": "Data Governance",
+    "question": "Which Unity Catalog system table provides a complete audit trail of data access events?",
+    "options": [
+      "system.information_schema.tables",
+      "system.access.audit",
+      "system.runtime.query_history",
+      "system.catalog.access_log"
+    ],
+    "correct": 1,
+    "explanation": "system.access.audit (part of Unity Catalog system tables) records all data access events including who accessed what data, when, and from which compute. It is the primary source for data access auditing and compliance reporting."
+  },
+  {
+    "id": 40,
+    "category": "Data Governance",
+    "question": "What privilege is required to read data files directly from a cloud storage path registered as an External Location in Unity Catalog?",
+    "options": [
+      "SELECT on the external location",
+      "READ FILES on the external location",
+      "USAGE on the storage credential",
+      "CREATE EXTERNAL TABLE on the schema"
+    ],
+    "correct": 1,
+    "explanation": "READ FILES on an External Location grants the ability to directly read files from the underlying cloud storage path using spark.read or similar APIs. This is separate from table-level SELECT privileges, which only apply to registered tables."
+  },
+  {
+    "id": 41,
+    "category": "Data Governance",
+    "question": "A user has SELECT on a view. The view queries a table that the user does NOT have SELECT on. Can the user query the view?",
+    "options": [
+      "No — the user needs SELECT on all underlying tables",
+      "Yes — Unity Catalog views use definer's rights; the view owner's permissions apply to underlying tables",
+      "No — cross-object privilege inheritance is not supported in Unity Catalog",
+      "Yes — but only if the view and table are in the same schema"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog views use definer's rights semantics. When a user queries a view, access to underlying tables is checked against the VIEW OWNER's permissions, not the querying user's. This allows secure data abstraction — users can access views without needing direct access to underlying tables."
+  },
+  {
+    "id": 42,
+    "category": "Data Governance",
+    "question": "What is Delta Lake Change Data Feed (CDF)?",
+    "options": [
+      "A feature that replicates Delta tables to external systems in real time",
+      "A feature that captures row-level changes (inserts, updates, deletes) to a Delta table for downstream consumption",
+      "A Kafka-compatible interface for streaming Delta table updates",
+      "A CDC format that converts Delta tables to Debezium-compatible output"
+    ],
+    "correct": 1,
+    "explanation": "Delta Change Data Feed (CDF) records row-level changes to a Delta table — inserts, updates, and deletes — along with the change type and version. Downstream consumers can read these changes incrementally using readChangeFeed = true, enabling efficient CDC pipelines."
+  },
+  {
+    "id": 43,
+    "category": "Development & Ingestion",
+    "question": "A streaming job uses Structured Streaming with a Delta table sink. The job fails mid-run and is restarted. How does Structured Streaming ensure no data is lost or duplicated?",
+    "options": [
+      "By reprocessing all source data from the beginning on every restart",
+      "By using a checkpoint to track the last committed offset and resuming from that point",
+      "By using Delta's MERGE operation to deduplicate on restart",
+      "Data deduplication is the responsibility of the engineer — Structured Streaming provides no guarantees"
+    ],
+    "correct": 1,
+    "explanation": "Structured Streaming uses a checkpoint to persist the last successfully committed offset. On restart, the engine reads the checkpoint and resumes processing from where it stopped, providing exactly-once end-to-end semantics when the sink is idempotent (like Delta Lake)."
+  },
+  {
+    "id": 44,
+    "category": "Development & Ingestion",
+    "question": "What trigger type causes a Structured Streaming job to process all available data and then stop?",
+    "options": [
+      "trigger(processingTime='0 seconds')",
+      "trigger(availableNow=True)",
+      "trigger(once=True)",
+      "Both B and C — availableNow is the updated version of once"
+    ],
+    "correct": 3,
+    "explanation": "trigger(once=True) processes all available data in a single microbatch and stops. trigger(availableNow=True) is the improved successor — it processes all available data in multiple optimized microbatches and stops. Both cause the stream to terminate after catching up, useful for scheduled batch-style streaming jobs."
+  },
+  {
+    "id": 45,
+    "category": "Data Processing",
+    "question": "Which command shows the history of all operations performed on a Delta table?",
+    "options": [
+      "SHOW HISTORY table_name",
+      "DESCRIBE HISTORY table_name",
+      "SELECT * FROM table_name VERSION AS OF 0",
+      "SHOW VERSIONS table_name"
+    ],
+    "correct": 1,
+    "explanation": "DESCRIBE HISTORY table_name returns a table showing all operations in the Delta transaction log — including writes, schema changes, OPTIMIZE runs, VACUUM, and RESTORE — along with version number, timestamp, user, and operation parameters."
+  },
+  {
+    "id": 46,
+    "category": "Data Processing",
+    "question": "A data engineer accidentally deletes important rows from a Delta table. How can they recover the data?",
+    "options": [
+      "Run VACUUM to restore the deleted files",
+      "Use RESTORE TABLE table_name TO VERSION AS OF <version> to roll back",
+      "Use DESCRIBE HISTORY to find the deleted rows",
+      "Recovery is not possible once rows are deleted from a Delta table"
+    ],
+    "correct": 1,
+    "explanation": "RESTORE TABLE allows rolling back a Delta table to a previous version, recovering accidentally deleted or corrupted data. This requires that VACUUM has not yet removed the data files for that version (within the retention period)."
+  },
+  {
+    "id": 47,
+    "category": "Productionizing Pipelines",
+    "question": "What is the purpose of `databricks bundle validate` before deploying?",
+    "options": [
+      "It deploys the bundle to a validation sandbox environment",
+      "It checks the bundle configuration YAML for syntax errors and logical issues",
+      "It runs unit tests defined in the bundle",
+      "It validates that all referenced clusters exist in the target workspace"
+    ],
+    "correct": 1,
+    "explanation": "databricks bundle validate checks the databricks.yml configuration for syntax errors, missing required fields, and logical issues. It does NOT validate against the target workspace (e.g., cluster existence). It is a local pre-flight check before attempting deployment."
+  },
+  {
+    "id": 48,
+    "category": "Productionizing Pipelines",
+    "question": "A data engineer wants to run a Databricks Job on a schedule every day at 8 AM UTC. Which configuration is needed?",
+    "options": [
+      "Set the job trigger to 'Scheduled' with a cron expression '0 8 * * *'",
+      "Set the job trigger to 'Continuous' with a polling interval of 24 hours",
+      "Set the job trigger to 'File arrival' with a 24-hour delay",
+      "Use a Databricks Workflow with a time-based sensor task"
+    ],
+    "correct": 0,
+    "explanation": "Databricks Jobs support scheduled triggers using Quartz cron expressions. '0 8 * * *' means 'at 8:00 AM every day'. The job UI also provides a visual scheduler as an alternative to writing cron syntax directly."
+  },
+  {
+    "id": 49,
+    "category": "Data Governance",
+    "question": "Which Unity Catalog feature tracks how data flows from source to destination across tables and pipelines?",
+    "options": [
+      "Data tagging",
+      "Column-level lineage",
+      "Audit logs",
+      "Data quality monitoring"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog automatically captures column-level data lineage, showing how data flows from source tables through transformations (notebooks, SQL, DLT) to destination tables. This helps with impact analysis, compliance, and debugging data quality issues."
+  },
+  {
+    "id": 50,
+    "category": "Development & Ingestion",
+    "question": "A data engineer needs to ingest data from a JDBC source (PostgreSQL) into a Delta table in Databricks. Which approach is recommended for large tables?",
+    "options": [
+      "Use spark.read.jdbc with a single partition for simplicity",
+      "Use spark.read.jdbc with partitionColumn, lowerBound, upperBound, and numPartitions to parallelize reads",
+      "Use Auto Loader with cloudFiles.format = 'jdbc'",
+      "Use COPY INTO with a JDBC connection string"
+    ],
+    "correct": 1,
+    "explanation": "For large JDBC tables, parallelizing reads using partitionColumn (a numeric or date column), lowerBound, upperBound, and numPartitions splits the table into multiple partitions read concurrently by different Spark tasks. Single-partition reads are a bottleneck for large tables."
+  }
+]
