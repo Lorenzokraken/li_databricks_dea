@@ -1,0 +1,1304 @@
+[
+  {
+    "id": 1,
+    "category": "Auto Loader",
+    "question": "An Auto Loader stream is running with cloudFiles.schemaEvolutionMode = 'addNewColumns'. A new file arrives with a column that already exists in the schema but with an incompatible data type (e.g., previously INT, now STRING). What happens?",
+    "options": [
+      "The stream fails with a schema mismatch error and must be restarted",
+      "The new type overwrites the existing schema and ingestion continues",
+      "The conflicting value is written to _rescued_data and ingestion continues",
+      "Auto Loader automatically widens the type to STRING and continues"
+    ],
+    "correct": 2,
+    "explanation": "Type conflicts are not resolved by addNewColumns mode. The conflicting field value is rescued into the _rescued_data column to avoid data loss, while the original column schema is preserved. Only explicit schema hints or rescue mode handle this gracefully."
+  },
+  {
+    "id": 2,
+    "category": "Auto Loader",
+    "question": "You restart an Auto Loader stream after a failure. The checkpointLocation still exists. What is the guaranteed behavior?",
+    "options": [
+      "Auto Loader reprocesses all files from the source to ensure no data loss",
+      "Auto Loader resumes exactly from where it stopped, with no duplicate processing",
+      "Auto Loader skips files already listed in the checkpoint but may reprocess some files from the last incomplete microbatch",
+      "Auto Loader deletes the checkpoint and starts fresh to avoid corruption"
+    ],
+    "correct": 2,
+    "explanation": "Auto Loader guarantees exactly-once file discovery via the checkpoint. However, the last incomplete microbatch may be reprocessed. Combined with Delta's idempotent writes, this achieves end-to-end exactly-once semantics — but the stream itself may reprocess the last partial batch."
+  },
+  {
+    "id": 3,
+    "category": "Auto Loader",
+    "question": "You use Auto Loader in directory listing mode instead of file notification mode. Your source S3 bucket contains millions of files. What is the primary operational risk?",
+    "options": [
+      "Directory listing mode does not support schema inference",
+      "Listing latency increases linearly with file count, causing slow trigger intervals",
+      "Auto Loader cannot track processed files in directory listing mode",
+      "Directory listing mode requires Unity Catalog external locations"
+    ],
+    "correct": 1,
+    "explanation": "Directory listing mode scans the entire source directory to detect new files on each trigger. With millions of files, this becomes increasingly slow and expensive. File notification mode (via SQS/Event Grid) is recommended for large-scale sources as it only processes new file events."
+  },
+  {
+    "id": 4,
+    "category": "Delta Lake",
+    "question": "You run OPTIMIZE on a Delta table followed immediately by VACUUM RETAIN 0 HOURS. What is the risk?",
+    "options": [
+      "VACUUM will delete the newly optimized files because they are not yet referenced in the log",
+      "VACUUM will fail because OPTIMIZE locks the table",
+      "Concurrent readers may get FileNotFoundException when accessing files deleted by VACUUM",
+      "Nothing — OPTIMIZE and VACUUM are always safe to run sequentially"
+    ],
+    "correct": 2,
+    "explanation": "VACUUM RETAIN 0 HOURS (which requires spark.databricks.delta.retentionDurationCheck.enabled = false) deletes ALL unreferenced files immediately. If any concurrent reader opened a snapshot before VACUUM ran, their referenced files may be deleted mid-read, causing FileNotFoundException. This is why the default 7-day retention exists."
+  },
+  {
+    "id": 5,
+    "category": "Delta Lake",
+    "question": "A Delta table has 500 versions in its transaction log. You need to query VERSION AS OF 10. VACUUM has never been run. What is the potential issue?",
+    "options": [
+      "VERSION AS OF 10 is not supported — only TIMESTAMP AS OF is available",
+      "The query succeeds but Delta must replay all 500 log entries to reconstruct version 10",
+      "The query fails because Delta only retains the last 30 versions by default",
+      "The query succeeds but is slow because Delta replays log entries from version 0 to 10"
+    ],
+    "correct": 3,
+    "explanation": "Delta Lake reconstructs historical versions by replaying transaction log entries from the nearest checkpoint. Without checkpoints, it must replay from version 0. Delta automatically creates checkpoints every 10 commits, so version 10 would be at most 10 log entries to replay — but on very old versions with no nearby checkpoint, performance degrades significantly."
+  },
+  {
+    "id": 6,
+    "category": "Delta Lake",
+    "question": "You perform a MERGE INTO operation on a Delta table. The source DataFrame contains duplicate rows matching the same target row. What happens?",
+    "options": [
+      "The last matching source row wins and updates the target",
+      "MERGE throws an error — multiple source rows matching a single target row is not allowed",
+      "The first matching source row is applied and the rest are ignored",
+      "All matching rows are inserted as new records"
+    ],
+    "correct": 1,
+    "explanation": "Delta Lake MERGE follows SQL standard semantics: if multiple source rows match a single target row, the behavior is non-deterministic and Delta throws an AnalysisException. You must deduplicate the source before MERGE to ensure at most one source row matches each target row."
+  },
+  {
+    "id": 7,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline has a table with CONSTRAINT valid_age EXPECT (age > 0) ON VIOLATION DROP ROW. After a pipeline run, you notice the target table has fewer rows than the source. Where can you find exactly how many rows were dropped?",
+    "options": [
+      "The pipeline event log in the DLT UI under Data Quality metrics",
+      "The Delta transaction log of the target table",
+      "The Spark UI under the SQL tab",
+      "The cluster driver logs"
+    ],
+    "correct": 0,
+    "explanation": "DLT tracks constraint violations natively in the pipeline event log, accessible via the DLT UI Data Quality tab or by querying the event_log() function. It records the constraint name, number of records dropped/failed per update. The Delta log and Spark UI do not expose this DLT-specific metadata."
+  },
+  {
+    "id": 8,
+    "category": "DLT / Lakeflow",
+    "question": "You define a Streaming Table in DLT that reads from a Kafka topic. The pipeline is set to Continuous mode. The pipeline fails and is restarted. What happens to records that arrived during the downtime?",
+    "options": [
+      "Records are lost — Kafka does not buffer for DLT pipelines",
+      "Records are replayed from the last committed Kafka offset stored in the DLT checkpoint",
+      "DLT automatically replays from the beginning of the Kafka topic",
+      "Records are replayed only if the Kafka topic retention covers the downtime period AND the DLT checkpoint is intact"
+    ],
+    "correct": 3,
+    "explanation": "DLT stores the last committed Kafka offset in its checkpoint. On restart, it resumes from that offset. However, if Kafka has already purged those messages (retention expired), the records are unrecoverable. Both conditions must hold: checkpoint intact AND Kafka retention covers the gap."
+  },
+  {
+    "id": 9,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline in Development mode vs Production mode — what is a key behavioral difference when a pipeline run encounters an error?",
+    "options": [
+      "Development mode retries failed tasks automatically; Production mode does not",
+      "Development mode keeps the cluster running after failure for debugging; Production mode terminates the cluster",
+      "Production mode rolls back all changes on failure; Development mode does not",
+      "Development mode skips constraint violations; Production mode enforces them"
+    ],
+    "correct": 1,
+    "explanation": "In Development mode, the cluster remains running after a pipeline failure, allowing interactive debugging via the notebook. In Production mode, the cluster is terminated after failure to save costs. Constraint enforcement behavior is identical between modes."
+  },
+  {
+    "id": 10,
+    "category": "Unity Catalog",
+    "question": "A user has USAGE on catalog and schema, and SELECT on a table. The table owner runs REVOKE SELECT on the table from the user. The user is also a member of a group that has SELECT on the same table. Can the user still query the table?",
+    "options": [
+      "No — REVOKE on a user always overrides group-level grants",
+      "Yes — Unity Catalog uses an additive permission model; group SELECT is still active",
+      "No — REVOKE invalidates all permissions including inherited ones",
+      "Yes — but only if the group is a direct parent group, not a nested group"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog uses an additive (allow-list) permission model with no explicit DENY. Revoking SELECT from a user only removes the user-level grant. If the user still has SELECT via group membership, they retain access. There is no deny-override mechanism in Unity Catalog."
+  },
+  {
+    "id": 11,
+    "category": "Unity Catalog",
+    "question": "You want to move a managed table from catalog_a.schema_a.table to catalog_b.schema_b.table in Unity Catalog. What is the correct approach?",
+    "options": [
+      "ALTER TABLE catalog_a.schema_a.table RENAME TO catalog_b.schema_b.table",
+      "CREATE TABLE catalog_b.schema_b.table AS SELECT * FROM catalog_a.schema_a.table, then DROP the original",
+      "Use CLONE to deep clone the table to the new location",
+      "Use the Databricks UI to drag and drop the table between catalogs"
+    ],
+    "correct": 1,
+    "explanation": "ALTER TABLE RENAME does not support cross-catalog moves in Unity Catalog. The correct approach is CTAS (CREATE TABLE AS SELECT) to the new location followed by DROP of the original, or DEEP CLONE. RENAME only works within the same catalog."
+  },
+  {
+    "id": 12,
+    "category": "Unity Catalog",
+    "question": "A notebook tries to access a file directly via spark.read.format('parquet').load('abfss://container@storage.dfs.core.windows.net/path'). Unity Catalog is enabled. What is required?",
+    "options": [
+      "SELECT privilege on the external location",
+      "READ FILES privilege on an external location covering that path",
+      "USAGE on the storage credential only",
+      "No special privilege — direct file access is always allowed in Unity Catalog"
+    ],
+    "correct": 1,
+    "explanation": "Direct file path access in Unity Catalog workspaces requires READ FILES on an External Location that covers the path. This is separate from table-level SELECT privileges. Without READ FILES on the external location, the direct spark.read call will fail with a permission error."
+  },
+  {
+    "id": 13,
+    "category": "Databricks Asset Bundles",
+    "question": "You run `databricks bundle deploy --target prod`. The job already exists in the prod workspace from a previous deploy. What happens to the existing job?",
+    "options": [
+      "A new job is created alongside the existing one",
+      "The deploy fails — you must delete the existing job first",
+      "The existing job is updated in place with the new configuration",
+      "The existing job is deleted and recreated from scratch"
+    ],
+    "correct": 2,
+    "explanation": "DABs are idempotent by design. Running bundle deploy on an already-deployed target updates the existing resources in place rather than creating duplicates or failing. DABs track resource state via the bundle's state file to enable this behavior."
+  },
+  {
+    "id": 14,
+    "category": "Databricks Asset Bundles",
+    "question": "In a DAB, you define a job with a git_source pointing to a specific branch. You deploy to prod. Two weeks later, new commits are pushed to that branch. What happens to the prod job?",
+    "options": [
+      "The prod job automatically picks up the new commits on next run",
+      "The prod job uses the commit SHA pinned at deploy time until you redeploy",
+      "DABs poll the git branch every hour and update the job automatically",
+      "The prod job fails on next run because the branch has diverged"
+    ],
+    "correct": 0,
+    "explanation": "When git_source references a branch (not a tag or commit SHA), the job resolves the latest commit on that branch at runtime — not at deploy time. To pin a specific version, you must reference a tag or commit SHA in the git_source configuration."
+  },
+  {
+    "id": 15,
+    "category": "Spark Optimization",
+    "question": "A Spark job reads a large Delta table and runs a groupBy().agg() operation. You notice excessive shuffle spill to disk in the Spark UI. Which is the MOST effective first action?",
+    "options": [
+      "Increase spark.sql.shuffle.partitions from the default 200",
+      "Enable Adaptive Query Execution (AQE) to automatically coalesce shuffle partitions",
+      "Add ZORDER on the groupBy column",
+      "Switch from groupBy to reduceByKey for better performance"
+    ],
+    "correct": 1,
+    "explanation": "Shuffle spill occurs when shuffle partitions are too large for executor memory. AQE (spark.sql.adaptive.enabled=true, default in DBR 7+) dynamically coalesces small shuffle partitions and splits large ones, directly addressing spill. Increasing shuffle partitions may help but can worsen small-file problems. reduceByKey is RDD API, not applicable to DataFrames."
+  },
+  {
+    "id": 16,
+    "category": "Spark Optimization",
+    "question": "You have two DataFrames: a large fact table (10TB) and a small dimension table (50MB). You join them. Spark chooses a SortMergeJoin instead of a BroadcastHashJoin. What is the most likely reason?",
+    "options": [
+      "BroadcastHashJoin is not supported for Delta tables",
+      "The dimension table exceeds spark.sql.autoBroadcastJoinThreshold (default 10MB)",
+      "The join key is nullable, preventing broadcast",
+      "AQE is disabled, so Spark cannot dynamically switch join strategies"
+    ],
+    "correct": 1,
+    "explanation": "The default autoBroadcastJoinThreshold is 10MB. A 50MB table exceeds this threshold, so Spark falls back to SortMergeJoin. You can either increase the threshold, use broadcast() hint explicitly, or rely on AQE's dynamic join reordering if the runtime size estimate is smaller."
+  },
+  {
+    "id": 17,
+    "category": "Spark Optimization",
+    "question": "A streaming job using foreachBatch writes to an external database. The job fails mid-batch and restarts. The external database now has duplicate records. What is the root cause?",
+    "options": [
+      "foreachBatch does not support exactly-once semantics by default — the sink must be idempotent",
+      "Spark streaming guarantees at-most-once delivery, so duplicates are unexpected",
+      "The checkpoint was corrupted on failure, causing full reprocessing",
+      "foreachBatch should be replaced with foreach for exactly-once delivery"
+    ],
+    "correct": 0,
+    "explanation": "Spark Structured Streaming guarantees exactly-once within the streaming engine, but foreachBatch delegates write responsibility to user code. If the external sink is not idempotent (e.g., no upsert/dedup logic), a failed and retried batch will produce duplicates. The user must implement idempotency in the foreachBatch function."
+  },
+  {
+    "id": 18,
+    "category": "Medallion Architecture",
+    "question": "In a Medallion architecture, a Silver table is defined as a Streaming Table in DLT reading from a Bronze Streaming Table. The Bronze table receives a large backfill of historical data. What happens to the Silver table?",
+    "options": [
+      "The Silver table ignores the backfill — streaming tables only process new data",
+      "The Silver table automatically processes the backfill in micro-batches",
+      "The Silver table must be full-refreshed manually to include the backfill",
+      "The Silver table processes the backfill only if APPLY CHANGES INTO is used"
+    ],
+    "correct": 1,
+    "explanation": "DLT Streaming Tables use Auto Loader or Delta streaming sources that track watermarks/offsets. New data appended to Bronze (even as a backfill) is treated as new records to process. The Silver streaming table will automatically consume the backfill in subsequent pipeline runs without manual intervention."
+  },
+  {
+    "id": 19,
+    "category": "Medallion Architecture",
+    "question": "You use APPLY CHANGES INTO (CDC) in DLT to build a Silver SCD Type 1 table. A DELETE event arrives for a key that does not exist in the Silver table. What happens?",
+    "options": [
+      "DLT throws an error for the unmatched DELETE",
+      "The DELETE is silently ignored — no matching row means no action",
+      "DLT inserts a tombstone record with a null payload",
+      "The pipeline fails with a constraint violation"
+    ],
+    "correct": 1,
+    "explanation": "APPLY CHANGES INTO handles DELETE events by removing the matching row if it exists. If no matching row is found (the key was never inserted or was already deleted), the DELETE is a no-op — it is silently ignored. No error, no tombstone, no insertion."
+  },
+  {
+    "id": 20,
+    "category": "Databricks Jobs",
+    "question": "A Databricks Job has three tasks: A → B → C. Task B fails. The job is configured with 'Run if dependencies succeeded' for all tasks. You fix the issue and click 'Repair Run'. What happens?",
+    "options": [
+      "The entire job reruns from Task A",
+      "Only Task B and Task C are rerun; Task A is skipped",
+      "Only Task B is rerun; Task C runs only if B succeeds",
+      "Task C is skipped because it already ran before the failure"
+    ],
+    "correct": 1,
+    "explanation": "Repair Run reruns only the failed task and its downstream dependencies. Task A already succeeded and is not rerun. Task B is retried, and if it succeeds, Task C runs. This is a key operational feature to avoid reprocessing expensive upstream tasks."
+  },
+  {
+    "id": 21,
+    "category": "Databricks Jobs",
+    "question": "You schedule a Databricks Job to run every hour. The job occasionally takes 90 minutes to complete. What happens when the next scheduled run triggers while the previous run is still active?",
+    "options": [
+      "The new run is skipped automatically",
+      "Both runs execute concurrently by default",
+      "The new run waits in queue until the previous run completes",
+      "The previous run is cancelled and the new run starts"
+    ],
+    "correct": 1,
+    "explanation": "By default, Databricks Jobs allow concurrent runs. Multiple instances of the same job can run simultaneously unless you explicitly set the Maximum Concurrent Runs to 1 in the job settings. Without that setting, the hourly trigger will start a new run regardless of the previous run's state."
+  },
+  {
+    "id": 22,
+    "category": "Cluster & Compute",
+    "question": "You use a Single Node cluster for a PySpark job that calls df.repartition(8). What happens?",
+    "options": [
+      "The job fails — Single Node clusters do not support repartition",
+      "The DataFrame is repartitioned into 8 partitions, all processed on the single driver/executor node",
+      "repartition is ignored and the DataFrame keeps its original partition count",
+      "Databricks automatically upgrades to a multi-node cluster to handle 8 partitions"
+    ],
+    "correct": 1,
+    "explanation": "Single Node clusters run both driver and executor on the same machine. repartition(8) creates 8 partitions, all of which are processed locally on that single node. The call succeeds but provides no parallelism benefit. It may actually degrade performance by adding shuffle overhead without distributing work."
+  },
+  {
+    "id": 23,
+    "category": "Cluster & Compute",
+    "question": "A job cluster is configured with spot instances only. The cloud provider reclaims the spot instances mid-job. What is Databricks' default behavior?",
+    "options": [
+      "The job fails immediately with no retry",
+      "Databricks automatically falls back to on-demand instances and continues the job",
+      "Databricks retries the job from the beginning on new spot instances",
+      "The job is paused and waits for spot availability to resume"
+    ],
+    "correct": 0,
+    "explanation": "If spot instances are reclaimed and no fallback is configured, the job cluster terminates and the job fails. Databricks does not automatically fall back to on-demand instances unless you configure a spot instance fallback policy (e.g., using spot_bid_price_percent with on-demand fallback in the cluster config)."
+  },
+  {
+    "id": 24,
+    "category": "Databricks SQL",
+    "question": "A Databricks SQL query runs against a Delta table with 1000 partitions. The SQL Warehouse is configured with a small T-shirt size. The query times out. Which action is LEAST likely to help?",
+    "options": [
+      "Scaling up the SQL Warehouse size",
+      "Adding a ZORDER on the filter column to improve data skipping",
+      "Running ANALYZE TABLE to update column statistics",
+      "Increasing the number of SQL Warehouse clusters via autoscaling"
+    ],
+    "correct": 3,
+    "explanation": "SQL Warehouse autoscaling adds more clusters to handle concurrent queries from multiple users, not to speed up a single query. A single query runs on one cluster — adding more clusters does not parallelize one query. Scaling up the warehouse size, improving data skipping via ZORDER, or updating statistics all directly impact single-query performance."
+  },
+  {
+    "id": 25,
+    "category": "Data Governance",
+    "question": "You enable column masking on a sensitive column in Unity Catalog for a specific group. A member of that group runs a query with SELECT *. What happens to the masked column?",
+    "options": [
+      "The query fails — SELECT * is not allowed on tables with column masking",
+      "The masked column is excluded from the result set entirely",
+      "The masked column is returned with the masking function applied",
+      "The masked column is returned as NULL for all rows"
+    ],
+    "correct": 2,
+    "explanation": "Column masking in Unity Catalog applies the masking function transparently at query time. SELECT * returns all columns including the masked one, but the sensitive values are replaced by the masking function output (e.g., hashed, nullified, or partially redacted) based on the policy definition. The column is present but its values are transformed."
+  },
+  {
+    "id": 26,
+    "category": "Auto Loader",
+    "question": "You configure Auto Loader with cloudFiles.inferColumnTypes = true. On the first run, a column contains only integers and is inferred as LongType. On the next run, new files contain strings in that column. What happens?",
+    "options": [
+      "Auto Loader widens the type to StringType automatically",
+      "The new files are skipped and logged as schema mismatch errors",
+      "The string values are rescued into _rescued_data and the column remains LongType",
+      "Auto Loader restarts schema inference from scratch on every run"
+    ],
+    "correct": 2,
+    "explanation": "Once a schema is inferred and stored in the schemaLocation, Auto Loader does not re-infer types on subsequent runs. Type conflicts with the stored schema result in the offending values being rescued into _rescued_data. To change the inferred type, you must manually update or delete the schema file in schemaLocation."
+  },
+  {
+    "id": 27,
+    "category": "Auto Loader",
+    "question": "You have two Auto Loader streams reading from the same S3 path with different checkpointLocations. What is the expected behavior?",
+    "options": [
+      "Both streams process all files independently — each maintains its own offset tracking",
+      "The second stream fails because the path is already locked by the first stream",
+      "Files processed by the first stream are automatically skipped by the second",
+      "Both streams share file discovery state, causing unpredictable deduplication"
+    ],
+    "correct": 0,
+    "explanation": "Auto Loader checkpoint state is stored per stream in the specified checkpointLocation. Two streams with different checkpoints operate completely independently — both will discover and process all files in the source path. There is no cross-stream coordination or locking on the source."
+  },
+  {
+    "id": 28,
+    "category": "Delta Lake",
+    "question": "A Delta table has delta.logRetentionDuration set to 'interval 2 days'. VACUUM has never been run. You attempt TIME TRAVEL to a version from 5 days ago. What happens?",
+    "options": [
+      "The query succeeds — VACUUM has never run so all data files still exist",
+      "The query fails — the transaction log entries older than 2 days have been deleted",
+      "The query succeeds — logRetentionDuration only affects VACUUM behavior",
+      "The query fails — Delta automatically purges log entries beyond the retention window"
+    ],
+    "correct": 1,
+    "explanation": "delta.logRetentionDuration controls how long the Delta transaction log (JSON files in _delta_log) is retained. Log files older than this duration are automatically cleaned up by Delta independent of VACUUM. Without the log entry, time travel to that version is impossible even if data files still exist."
+  },
+  {
+    "id": 29,
+    "category": "Delta Lake",
+    "question": "You run a DEEP CLONE of a Delta table. After cloning, you insert new rows into the source table. What is the state of the clone?",
+    "options": [
+      "The clone automatically reflects the new rows — it is a live mirror",
+      "The clone is a fully independent copy and does not reflect changes to the source",
+      "The clone's metadata updates automatically but data files are not replicated",
+      "The clone fails to read new rows because the source schema may have changed"
+    ],
+    "correct": 1,
+    "explanation": "DEEP CLONE creates a fully independent copy of the table including data files and transaction log. After cloning, the clone and source are completely decoupled — changes to either table have no effect on the other. This is different from SHALLOW CLONE, which references source data files and can diverge."
+  },
+  {
+    "id": 30,
+    "category": "Delta Lake",
+    "question": "You perform a SHALLOW CLONE of a Delta table and then run VACUUM on the source table. What happens to the cloned table?",
+    "options": [
+      "Nothing — VACUUM on the source does not affect the clone's data files",
+      "The clone's reads may fail if VACUUM deletes data files that the clone still references",
+      "The clone automatically detaches from the source and becomes a deep copy",
+      "The clone is also vacuumed when the source is vacuumed"
+    ],
+    "correct": 1,
+    "explanation": "SHALLOW CLONE references the source table's data files rather than copying them. If VACUUM is run on the source and deletes old data files that the clone still references (e.g., for time travel), the clone will get FileNotFoundException on those reads. This is the primary operational risk of shallow clones."
+  },
+  {
+    "id": 31,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline uses APPLY CHANGES INTO with SEQUENCE BY on a timestamp column. Two CDC events arrive for the same key with the same timestamp but different payloads. What happens?",
+    "options": [
+      "Both events are applied and the last one wins based on processing order",
+      "DLT throws a duplicate sequence key error and halts the pipeline",
+      "The behavior is non-deterministic — one of the payloads is applied, but which one is not guaranteed",
+      "The first event is applied and subsequent events with the same sequence value are dropped"
+    ],
+    "correct": 2,
+    "explanation": "SEQUENCE BY defines ordering for CDC events. If two events share the same sequence value, DLT cannot determine which is 'later' and the outcome is non-deterministic. Delta's MERGE semantics for tied sequences does not guarantee which payload wins. Source systems should ensure sequence values are strictly monotonically increasing per key."
+  },
+  {
+    "id": 32,
+    "category": "DLT / Lakeflow",
+    "question": "You have a DLT Materialized View defined as SELECT * FROM streaming_table WHERE status = 'active'. The underlying streaming_table has 10M rows. How does DLT refresh the Materialized View on each pipeline run?",
+    "options": [
+      "Incrementally — only rows changed since the last run are recomputed",
+      "Fully — the Materialized View is recomputed from scratch on every run",
+      "Incrementally if the source is a Streaming Table; fully if it is a batch table",
+      "It depends on whether REFRESH is explicitly called in the pipeline"
+    ],
+    "correct": 1,
+    "explanation": "DLT Materialized Views are always fully recomputed on each pipeline run — they do not support incremental refresh based on source changes. For incremental processing, use Streaming Tables instead. This is a critical distinction: Materialized Views trade incremental efficiency for simplified query semantics."
+  },
+  {
+    "id": 33,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline has a table defined with @dlt.expect_all_or_drop({'valid_id': 'id IS NOT NULL', 'valid_age': 'age > 0'}). A record has a null id but a valid age. What happens to this record?",
+    "options": [
+      "The record is kept — only the failing constraint is flagged",
+      "The record is dropped — all constraints must pass for the record to be retained",
+      "The record is sent to a quarantine table for manual review",
+      "The pipeline fails — expect_all_or_drop halts on any violation"
+    ],
+    "correct": 1,
+    "explanation": "expect_all_or_drop applies ALL constraints as a combined filter. If ANY constraint fails, the entire record is dropped — even if other constraints pass. This differs from expect_all (which keeps records and logs violations) and expect_all_or_fail (which halts the pipeline)."
+  },
+  {
+    "id": 34,
+    "category": "Unity Catalog",
+    "question": "A table is owned by a service principal that has been deactivated. Who can modify the table's ownership?",
+    "options": [
+      "No one — ownership cannot be transferred from a deactivated principal",
+      "Any user with MODIFY privilege on the table",
+      "A metastore admin can reassign ownership",
+      "The catalog owner can reassign ownership automatically"
+    ],
+    "correct": 2,
+    "explanation": "In Unity Catalog, a metastore admin has the authority to reassign ownership of any securable object, including tables owned by deactivated service principals. This is a key administrative recovery path when the original owner is no longer active."
+  },
+  {
+    "id": 35,
+    "category": "Unity Catalog",
+    "question": "You create an external table in Unity Catalog pointing to s3://bucket/path/table. Another user creates a different external table pointing to s3://bucket/path/table/subfolder. What governance concern does this create?",
+    "options": [
+      "Unity Catalog prevents overlapping external locations — the second table creation fails",
+      "The second table can access data from the first table's path since it is a subfolder",
+      "Both tables operate independently with no overlap concern in Unity Catalog",
+      "The second table is automatically promoted to a managed table"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog does not prevent creating external tables with overlapping paths. A table pointing to s3://bucket/path/table/subfolder can still reference files within the parent table's path. This creates a governance risk where dropping or vacuuming the parent table could affect the child table's data files. Path overlap should be avoided by design."
+  },
+  {
+    "id": 36,
+    "category": "Unity Catalog",
+    "question": "A user tries to CREATE TABLE in a schema but gets a PermissionDeniedError. They have USAGE on catalog and schema. What privilege are they missing?",
+    "options": [
+      "CREATE on the catalog",
+      "CREATE TABLE on the schema",
+      "MODIFY on the schema",
+      "WRITE FILES on the managed storage location"
+    ],
+    "correct": 1,
+    "explanation": "USAGE allows traversal of the namespace hierarchy but does not grant the ability to create objects. CREATE TABLE (or more broadly CREATE) must be explicitly granted on the schema to allow table creation within it. USAGE + SELECT is a read-only combination; USAGE + CREATE TABLE is needed for DDL."
+  },
+  {
+    "id": 37,
+    "category": "Databricks Asset Bundles",
+    "question": "You run `databricks bundle destroy --target prod`. What happens?",
+    "options": [
+      "The bundle configuration files are deleted from the local filesystem",
+      "All resources defined in the bundle (jobs, pipelines, etc.) are deleted from the prod workspace",
+      "The prod target is removed from databricks.yml",
+      "Only the job runs are cancelled — the job definitions are kept"
+    ],
+    "correct": 1,
+    "explanation": "bundle destroy deletes all resources that were deployed by the bundle in the specified target workspace — including jobs, pipelines, and other defined resources. It is the inverse of bundle deploy. Local files are not affected. This is an irreversible operation in the target workspace."
+  },
+  {
+    "id": 38,
+    "category": "Databricks Asset Bundles",
+    "question": "You define a notebook task in a DAB referencing a relative path ./notebooks/my_notebook. You deploy to a workspace. Where does Databricks upload the notebook?",
+    "options": [
+      "To the workspace root /my_notebook",
+      "To a bundle-managed path under /Users/<deploying_user>/.bundle/<bundle_name>/<target>/",
+      "To the path specified in the workspace.root_path configuration",
+      "Notebooks are not uploaded — they are referenced from the local git repo at runtime"
+    ],
+    "correct": 1,
+    "explanation": "DABs upload notebook artifacts to a bundle-managed path in the workspace, typically under /Users/<deploying_user>/.bundle/<bundle_name>/<target>/files/. The root_path can be customized in databricks.yml. This ensures bundle artifacts are isolated per user/target and do not conflict with manually managed workspace files."
+  },
+  {
+    "id": 39,
+    "category": "Spark Optimization",
+    "question": "A Spark job reads a 100GB Delta table and applies a filter on a non-partitioned, non-ZORDERED column. AQE is enabled. What optimization, if any, does AQE apply here?",
+    "options": [
+      "AQE dynamically prunes partitions based on runtime statistics",
+      "AQE rewrites the filter as a broadcast join for better performance",
+      "AQE has no effect on scan-side filtering — it only optimizes joins and shuffles",
+      "AQE dynamically adds ZORDER at runtime for the filtered column"
+    ],
+    "correct": 2,
+    "explanation": "AQE optimizes post-shuffle operations: it coalesces shuffle partitions, handles skew joins, and switches join strategies dynamically. It does not improve scan-side filtering on non-partitioned, non-ZORDERED columns — that requires static optimizations like partitioning, ZORDER, or liquid clustering at table design time."
+  },
+  {
+    "id": 40,
+    "category": "Spark Optimization",
+    "question": "Your Spark job has a skewed join where 80% of keys map to a single value ('unknown'). AQE skew join optimization is enabled. What does AQE do?",
+    "options": [
+      "AQE filters out the skewed key automatically to balance the join",
+      "AQE splits the skewed partition into smaller sub-partitions and replicates the matching partition from the other side",
+      "AQE broadcasts the smaller side of the join to avoid shuffle entirely",
+      "AQE has no effect — skew must be handled manually with salting"
+    ],
+    "correct": 1,
+    "explanation": "AQE's skew join optimization detects skewed partitions at runtime and splits them into smaller sub-partitions. The corresponding partition from the other side is replicated to match each sub-partition. This parallelizes processing of the skewed key without manual salting, though extreme skew (like a dominant null/unknown key) may still require explicit handling."
+  },
+  {
+    "id": 41,
+    "category": "Medallion Architecture",
+    "question": "In a Bronze layer ingested via Auto Loader, you store raw JSON as a string column (raw_payload STRING) to preserve fidelity. At what layer should schema enforcement and type casting typically occur?",
+    "options": [
+      "Bronze — enforce schema at ingestion to catch errors early",
+      "Silver — parse, cast, and validate during the Bronze-to-Silver transformation",
+      "Gold — apply transformations only at the consumption layer",
+      "It depends on whether the downstream consumers are batch or streaming"
+    ],
+    "correct": 1,
+    "explanation": "The Medallion pattern prescribes Bronze as a raw, append-only landing zone preserving data fidelity. Silver is where cleaning, schema enforcement, type casting, and deduplication occur. Gold is for business-level aggregations. Enforcing schema at Bronze risks rejecting valid data; deferring to Gold makes Silver transformations unverifiable."
+  },
+  {
+    "id": 42,
+    "category": "Medallion Architecture",
+    "question": "A Gold table is a Materialized View aggregating Silver data. Silver data is corrected via an UPDATE (late-arriving correction). How does this affect the Gold Materialized View in DLT?",
+    "options": [
+      "The Gold view reflects the correction automatically in real time",
+      "The Gold view reflects the correction on the next full pipeline refresh",
+      "The Gold view never reflects corrections — it only processes appends",
+      "The Gold view must be manually dropped and recreated to reflect the correction"
+    ],
+    "correct": 1,
+    "explanation": "DLT Materialized Views are fully recomputed on each pipeline run. On the next run, the Silver correction is included in the recomputation and the Gold view reflects the updated data. This full-refresh semantic is why Materialized Views are suitable for correction-prone data, at the cost of recomputation overhead."
+  },
+  {
+    "id": 43,
+    "category": "Databricks Jobs",
+    "question": "A Job task is configured with 'Run if at least one parent succeeded'. The job has two parent tasks: Task A succeeds, Task B fails. Does the child task run?",
+    "options": [
+      "No — all parent tasks must succeed for any child to run",
+      "Yes — at least one parent (Task A) succeeded, satisfying the condition",
+      "No — a failed sibling task blocks all downstream tasks",
+      "Yes — but only if Task B's failure is marked as 'allowed failure'"
+    ],
+    "correct": 1,
+    "explanation": "'Run if at least one parent succeeded' means the task runs as long as one or more of its direct parent tasks completed successfully, regardless of other parents failing. This allows partial DAG execution for tasks that can proceed with incomplete upstream data."
+  },
+  {
+    "id": 44,
+    "category": "Databricks Jobs",
+    "question": "You configure a Databricks Job with a retry policy of 3 retries on failure. The job fails on run 1, succeeds on run 2 (retry 1). How many total job run records appear in the job run history?",
+    "options": [
+      "1 — the original run with retry attempts tracked internally",
+      "2 — one failed attempt and one successful attempt as separate records",
+      "3 — original plus two retry placeholders",
+      "4 — one for each possible retry plus the original"
+    ],
+    "correct": 0,
+    "explanation": "Databricks tracks retries within a single job run record. The run history shows one entry for the job run, with retry attempts visible as sub-attempts within that run's detail page. A new top-level run record is only created when you manually trigger a new run or use Repair Run."
+  },
+  {
+    "id": 45,
+    "category": "Cluster & Compute",
+    "question": "You enable autoscaling on a job cluster between 2 and 10 workers. The job starts with 2 workers and Spark submits 100 tasks. Autoscaling adds workers. At what point does autoscaling scale DOWN?",
+    "options": [
+      "Immediately when all tasks complete",
+      "After a configurable idle timeout when executors have no tasks assigned",
+      "Only when the job completes and the cluster is terminated",
+      "After spark.dynamicAllocation.executorIdleTimeout expires per executor"
+    ],
+    "correct": 1,
+    "explanation": "Databricks autoscaling monitors executor utilization. Workers are scaled down after they have been idle (no tasks assigned) for a configurable period. This is distinct from Spark's native Dynamic Resource Allocation — Databricks uses its own autoscaling logic that accounts for both task queue depth and executor idleness."
+  },
+  {
+    "id": 46,
+    "category": "Cluster & Compute",
+    "question": "A job uses a shared cluster (instead of a job cluster). The job fails and the cluster is restarted. What is a key consequence compared to using a job cluster?",
+    "options": [
+      "The job automatically retries on the shared cluster",
+      "Other jobs running on the shared cluster are also interrupted by the restart",
+      "The shared cluster retains job outputs in cache for faster reruns",
+      "Shared clusters cannot be restarted — a new cluster must be provisioned"
+    ],
+    "correct": 1,
+    "explanation": "Shared (all-purpose) clusters are multi-tenant by design. If the cluster is restarted due to one job's failure, all other workloads running on that cluster are also interrupted. Job clusters are isolated per job run, making them safer for production workloads."
+  },
+  {
+    "id": 47,
+    "category": "Data Governance",
+    "question": "You define a row filter on a table that returns rows WHERE region = current_user_region(). A user with no region attribute set queries the table. What is the expected behavior?",
+    "options": [
+      "The query returns all rows — missing attributes default to no filter",
+      "The query returns zero rows — the filter evaluates to no matching region",
+      "The query fails with an attribute resolution error",
+      "The behavior depends on the NULL handling in the filter function definition"
+    ],
+    "correct": 3,
+    "explanation": "Row filter behavior with missing/null user attributes depends entirely on how the filter function handles NULLs. If current_user_region() returns NULL for users without the attribute, and the filter is WHERE region = NULL (which is always false in SQL), zero rows are returned. If the function handles NULL with IS NULL checks or defaults, behavior differs. The function definition governs the outcome."
+  },
+  {
+    "id": 48,
+    "category": "Data Governance",
+    "question": "A table has both a column mask and a row filter applied. In what order does Unity Catalog apply these policies when a query is executed?",
+    "options": [
+      "Column masks are applied first, then row filters",
+      "Row filters are applied first, then column masks",
+      "Both are applied simultaneously as a single predicate pushdown",
+      "The order depends on the query optimizer's execution plan"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog applies row filters before column masks. The row filter reduces the result set first, then column masking transforms the values in the remaining rows. This ordering is consistent and deterministic — the optimizer cannot reorder policy application, ensuring governance policies behave predictably regardless of query structure."
+  },
+  {
+    "id": 49,
+    "category": "Databricks SQL",
+    "question": "A Databricks SQL query uses CACHE TABLE on a Delta table. An upstream job modifies the Delta table. What happens to subsequent SQL queries against the cached table?",
+    "options": [
+      "Queries return stale data from the cache until UNCACHE TABLE is called or the cache expires",
+      "Delta's transaction log invalidates the cache automatically on table modification",
+      "The cache is invalidated and the query fails with a cache miss error",
+      "Queries are routed to the live table automatically if the cache is stale"
+    ],
+    "correct": 1,
+    "explanation": "In Databricks, Delta tables benefit from automatic cache invalidation. When a Delta table is modified, the transaction log update triggers cache invalidation in the SQL warehouse. Subsequent queries re-read from the live table. This differs from Spark's CACHE TABLE on non-Delta sources, which requires manual REFRESH TABLE."
+  },
+  {
+    "id": 50,
+    "category": "Cluster & Compute",
+    "question": "You are running a memory-intensive Spark job and observe OOM errors on executors. Increasing executor memory is not an option. Which configuration change is MOST effective?",
+    "options": [
+      "Increase spark.driver.memory to offload executor pressure",
+      "Reduce spark.sql.shuffle.partitions to decrease total data in flight",
+      "Enable spark.memory.offHeap.enabled and allocate off-heap memory",
+      "Increase the number of partitions to reduce per-partition data size"
+    ],
+    "correct": 3,
+    "explanation": "OOM on executors typically means individual partitions are too large for executor memory. Increasing the number of partitions (via repartition or increasing spark.sql.shuffle.partitions) reduces data per partition, lowering per-executor memory pressure. Off-heap memory helps but requires additional OS memory. Reducing shuffle partitions worsens the problem."
+  },
+  {
+    "id": 51,
+    "category": "Auto Loader",
+    "question": "You configure Auto Loader with cloudFiles.maxFilesPerTrigger = 1000. The source has 50,000 backlogged files. How does Auto Loader handle the backlog?",
+    "options": [
+      "Auto Loader processes all 50,000 files in a single microbatch, ignoring the limit",
+      "Auto Loader processes 1,000 files per trigger until the backlog is cleared",
+      "Auto Loader skips backlogged files and only processes new incoming files",
+      "Auto Loader fails with a backlog overflow error"
+    ],
+    "correct": 1,
+    "explanation": "cloudFiles.maxFilesPerTrigger limits the number of files processed per microbatch. With 50,000 backlogged files and a limit of 1,000, Auto Loader processes them in 50 sequential microbatches. This prevents memory pressure and allows controlled catch-up without overwhelming downstream sinks."
+  },
+  {
+    "id": 52,
+    "category": "Auto Loader",
+    "question": "An Auto Loader stream has been running for 6 months. The schemaLocation contains an inferred schema. You want to force a full schema re-inference from scratch. What is the correct approach?",
+    "options": [
+      "Set cloudFiles.inferColumnTypes = true and restart the stream",
+      "Delete the schema files from schemaLocation and restart the stream",
+      "Set cloudFiles.schemaEvolutionMode = 'rescue' to reset inference",
+      "Drop the checkpoint and restart — schema re-inference happens automatically"
+    ],
+    "correct": 1,
+    "explanation": "Auto Loader persists inferred schema in the schemaLocation directory. To force full re-inference, you must delete the schema files from schemaLocation and restart the stream. Simply setting flags does not clear the stored schema. Note: this may cause downstream schema changes if new files have evolved significantly."
+  },
+  {
+    "id": 53,
+    "category": "Auto Loader",
+    "question": "You use Auto Loader in file notification mode on Azure with an Event Grid subscription. The Event Grid subscription is accidentally deleted. What happens to the Auto Loader stream?",
+    "options": [
+      "Auto Loader automatically falls back to directory listing mode",
+      "The stream continues processing already-queued messages until the queue is empty, then stalls",
+      "The stream fails immediately with a subscription not found error",
+      "Auto Loader recreates the Event Grid subscription automatically on next trigger"
+    ],
+    "correct": 1,
+    "explanation": "File notification mode uses a queue (e.g., Azure Storage Queue backed by Event Grid). If the Event Grid subscription is deleted, no new file notifications are enqueued. The stream continues consuming already-queued messages until the queue is drained, then effectively stalls with no new files discovered. It does NOT automatically fall back to listing mode."
+  },
+  {
+    "id": 54,
+    "category": "Delta Lake",
+    "question": "You write to a Delta table using append mode from two concurrent Spark jobs. What is Delta Lake's behavior?",
+    "options": [
+      "One job fails with a concurrent write conflict",
+      "Both writes succeed — Delta uses optimistic concurrency and appends are always conflict-free",
+      "Both writes succeed only if they write to different partitions",
+      "The second write is queued and applied after the first commits"
+    ],
+    "correct": 1,
+    "explanation": "Delta Lake uses optimistic concurrency control. Concurrent appends (INSERT operations) are conflict-free because they add new files without modifying existing ones. Delta's transaction log serializes the commits, and both succeed. Conflicts only arise when operations overlap on the same data files (e.g., concurrent UPDATE/DELETE on the same rows)."
+  },
+  {
+    "id": 55,
+    "category": "Delta Lake",
+    "question": "A Delta table has liquid clustering enabled on column user_id. You run OPTIMIZE on the table. What does OPTIMIZE do differently compared to a non-clustered table?",
+    "options": [
+      "OPTIMIZE applies ZORDER by user_id automatically",
+      "OPTIMIZE incrementally clusters only files that are not yet clustered, using Hilbert curve ordering",
+      "OPTIMIZE has no effect on liquid clustered tables — clustering is applied on write",
+      "OPTIMIZE rebuilds all files from scratch using the clustering key"
+    ],
+    "correct": 1,
+    "explanation": "Liquid clustering uses a Hilbert curve-based algorithm to colocate data by the clustering keys. OPTIMIZE for liquid clustered tables is incremental — it only processes files that are not yet optimally clustered (tracked via clustering metadata). This differs from ZORDER-based OPTIMIZE which always rewrites files in the specified range."
+  },
+  {
+    "id": 56,
+    "category": "Delta Lake",
+    "question": "You have a partitioned Delta table with 500 partitions. You run DELETE WHERE date < '2023-01-01', affecting 50 partitions. What does Delta actually do to the data files?",
+    "options": [
+      "Delta deletes the physical files from the 50 affected partitions immediately",
+      "Delta rewrites only the affected data files, marking old versions as removed in the transaction log",
+      "Delta adds a deletion vector to mark deleted rows without rewriting files",
+      "Delta marks entire partition directories as deleted in the transaction log"
+    ],
+    "correct": 2,
+    "explanation": "With Deletion Vectors enabled (default in DBR 12.2+), DELETE operations add deletion vectors — small files that mark which rows are deleted — without rewriting the underlying data files. This makes DELETE much faster. Physical file rewriting happens lazily during OPTIMIZE. Without DVs, Delta rewrites affected files."
+  },
+  {
+    "id": 57,
+    "category": "Delta Lake",
+    "question": "You use Delta Change Data Feed (CDF) on a table. A downstream consumer reads the changes using readChangeFeed. The consumer's last read version is 100. The table is at version 150. VACUUM was run with default retention 7 days ago, removing versions older than version 80. What happens when the consumer reads from version 100?",
+    "options": [
+      "The read fails — VACUUM deleted the CDF data for those versions",
+      "The read succeeds — versions 100-150 are within the retained range",
+      "The read succeeds — CDF data is stored separately from VACUUM's scope",
+      "The read partially succeeds, returning only versions after the VACUUM threshold"
+    ],
+    "correct": 1,
+    "explanation": "VACUUM removed data files older than version 80. The consumer needs versions 100-150, which are after version 80 and thus still retained. The read succeeds. CDF data (_change_data files) is subject to the same VACUUM retention as regular Delta data files — if the consumer had lagged past version 80, it would have failed."
+  },
+  {
+    "id": 58,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline is defined with two tables: table_a (Streaming Table) and table_b (Materialized View based on table_a). You trigger a FULL REFRESH on the pipeline. What happens to table_a?",
+    "options": [
+      "table_a is truncated and repopulated from the source from the beginning",
+      "table_a is unaffected — FULL REFRESH only applies to Materialized Views",
+      "table_a is dropped and recreated with the same schema",
+      "table_a reprocesses only the last 7 days of source data"
+    ],
+    "correct": 0,
+    "explanation": "A FULL REFRESH on a DLT pipeline truncates and repopulates ALL tables in the pipeline, including Streaming Tables. The checkpoint is also reset, causing Auto Loader or Delta streaming sources to reprocess from the beginning. This is an expensive operation and should be used carefully in production."
+  },
+  {
+    "id": 59,
+    "category": "DLT / Lakeflow",
+    "question": "You define a DLT table with @dlt.table(table_properties={'delta.enableChangeDataFeed': 'true'}). A downstream streaming job tries to read CDF from this table. What is the correct source format?",
+    "options": [
+      "spark.readStream.format('delta').option('readChangeFeed', 'true')",
+      "spark.readStream.format('cloudFiles').option('readChangeFeed', 'true')",
+      "spark.readStream.format('dlt').option('readChangeFeed', 'true')",
+      "spark.readStream.format('deltaSharing').option('readChangeFeed', 'true')"
+    ],
+    "correct": 0,
+    "explanation": "DLT tables are backed by Delta Lake. A downstream consumer reads CDF from a DLT-managed table using the standard Delta format with readChangeFeed = true, exactly as with any Delta table. The DLT runtime does not expose a separate format — the underlying Delta table is fully accessible via the standard Delta API."
+  },
+  {
+    "id": 60,
+    "category": "DLT / Lakeflow",
+    "question": "You have a DLT pipeline running in Triggered mode. It is scheduled to run every 30 minutes. One run takes 45 minutes. What happens to the next scheduled run?",
+    "options": [
+      "The next run is skipped to avoid overlap",
+      "The next run starts concurrently with the current run",
+      "The next run is queued and starts immediately after the current run completes",
+      "The pipeline switches to Continuous mode automatically to catch up"
+    ],
+    "correct": 2,
+    "explanation": "DLT in Triggered mode does not allow concurrent pipeline runs. If a run is still active when the next scheduled trigger fires, the new run is queued. It starts as soon as the current run completes. The pipeline does not skip runs or switch modes automatically."
+  },
+  {
+    "id": 61,
+    "category": "Unity Catalog",
+    "question": "You grant SELECT on a view to a user. The view references a table in a different schema. The user does NOT have SELECT on the underlying table. Can the user query the view?",
+    "options": [
+      "No — the user needs SELECT on all objects referenced by the view",
+      "Yes — views enforce caller's rights; the view owner's permissions are irrelevant",
+      "Yes — views in Unity Catalog use definer's rights; the view owner's SELECT on the table is sufficient",
+      "No — cross-schema view references always require explicit grants on both objects"
+    ],
+    "correct": 2,
+    "explanation": "Unity Catalog views use definer's rights semantics. When a user queries a view, the access check on underlying tables uses the VIEW OWNER's permissions, not the caller's. If the view owner has SELECT on the referenced table, the user can query the view without needing direct SELECT on the underlying table."
+  },
+  {
+    "id": 62,
+    "category": "Unity Catalog",
+    "question": "You DROP a managed table in Unity Catalog. What happens to the underlying data files?",
+    "options": [
+      "The data files are moved to a trash location and retained for 30 days",
+      "The data files are deleted immediately and permanently",
+      "The data files are retained until the next VACUUM run on the storage location",
+      "The data files are unregistered from the catalog but remain on storage indefinitely"
+    ],
+    "correct": 1,
+    "explanation": "Dropping a managed table in Unity Catalog deletes both the metadata from the catalog AND the underlying data files from managed storage. This is the key distinction between managed and external tables — dropping an external table only removes the catalog entry, leaving data files intact."
+  },
+  {
+    "id": 63,
+    "category": "Unity Catalog",
+    "question": "A workspace is attached to a Unity Catalog metastore. A user tries to access the Hive metastore (hive_metastore catalog) from that workspace. What is true?",
+    "options": [
+      "hive_metastore is inaccessible once Unity Catalog is enabled",
+      "hive_metastore is accessible but governed by Unity Catalog access controls",
+      "hive_metastore is accessible and governed by legacy table ACLs, not Unity Catalog",
+      "hive_metastore is merged into the Unity Catalog default catalog automatically"
+    ],
+    "correct": 2,
+    "explanation": "When Unity Catalog is enabled, the workspace-local Hive metastore remains accessible as the hive_metastore catalog. However, it continues to be governed by legacy workspace-level table ACLs (if enabled), NOT by Unity Catalog's permission model. Unity Catalog only governs objects in catalogs it manages."
+  },
+  {
+    "id": 64,
+    "category": "Databricks Asset Bundles",
+    "question": "You define a DLT pipeline in a DAB. The pipeline definition references a notebook at ./notebooks/pipeline.py. After `databricks bundle deploy`, where is the pipeline's notebook source path stored in the workspace?",
+    "options": [
+      "In the user's home directory under /Users/<user>/pipeline.py",
+      "In a bundle-managed path such as /Users/<user>/.bundle/<name>/<target>/files/notebooks/pipeline.py",
+      "In the Repos section under /Repos/<user>/<bundle_name>/notebooks/pipeline.py",
+      "In the workspace root at /notebooks/pipeline.py"
+    ],
+    "correct": 1,
+    "explanation": "DABs deploy all local files (notebooks, Python files) to a bundle-managed path in the workspace, typically /Users/<deploying_user>/.bundle/<bundle_name>/<target>/files/. The DLT pipeline definition is updated to reference this deployed path. The root_path in databricks.yml can customize the base deployment directory."
+  },
+  {
+    "id": 65,
+    "category": "Databricks Asset Bundles",
+    "question": "You run `databricks bundle validate` and it succeeds. You then run `databricks bundle deploy --target prod` and it fails. What is the most likely reason?",
+    "options": [
+      "bundle validate only checks YAML syntax, not workspace connectivity or resource conflicts",
+      "bundle validate and bundle deploy use different versions of the Databricks CLI",
+      "The prod workspace has a firewall blocking DAB deployments",
+      "bundle validate always succeeds — it does not perform any real checks"
+    ],
+    "correct": 0,
+    "explanation": "bundle validate checks the local YAML syntax and bundle structure for correctness, but it does NOT validate against the target workspace (e.g., cluster existence, permission to create resources, naming conflicts). Deploy-time failures catch workspace-specific issues that validate cannot detect locally."
+  },
+  {
+    "id": 66,
+    "category": "Spark Optimization",
+    "question": "A Spark job reads a 1TB Delta table and writes results to another Delta table. The job runs on a cluster with 10 executors, each with 16GB memory. You observe most executors are idle while 2 executors are running. What is the most likely root cause?",
+    "options": [
+      "The Delta table has too few files relative to the number of executors",
+      "Data skew — a small number of partitions contain most of the data",
+      "AQE is disabled, preventing dynamic partition coalescing",
+      "The cluster autoscaler has not yet provisioned all 10 executors"
+    ],
+    "correct": 1,
+    "explanation": "When most executors are idle while a few are busy, data skew is the primary suspect. A small number of large partitions keeps those executors busy while others wait. Solutions include salting skewed keys, repartitioning before the heavy operation, or enabling AQE skew join optimization."
+  },
+  {
+    "id": 67,
+    "category": "Spark Optimization",
+    "question": "You cache a DataFrame using df.cache(). The DataFrame is used in two subsequent actions. The cluster then evicts the cache due to memory pressure before the second action. What happens?",
+    "options": [
+      "The second action fails with a CacheEvictionException",
+      "Spark automatically recomputes the DataFrame from its lineage for the second action",
+      "The second action returns empty results because the cache was evicted",
+      "Spark persists the cache to disk automatically before eviction"
+    ],
+    "correct": 1,
+    "explanation": "Spark's lazy evaluation maintains the computation lineage (DAG) for every DataFrame. If a cached partition is evicted, Spark automatically recomputes it from the lineage on the next action. This is transparent to the user — there is no error. The tradeoff is recomputation cost vs memory usage."
+  },
+  {
+    "id": 68,
+    "category": "Spark Optimization",
+    "question": "You run a Spark SQL query with a WHERE clause on a date column. The table is partitioned by date. Explain plan shows a full scan of all partitions. What is the most likely cause?",
+    "options": [
+      "Partition pruning only works with integer columns, not date columns",
+      "The WHERE clause uses a function on the partition column (e.g., YEAR(date) = 2024), preventing pruning",
+      "AQE disabled partition pruning to optimize the overall query plan",
+      "Partition pruning requires an explicit HINT in the query"
+    ],
+    "correct": 1,
+    "explanation": "Partition pruning requires the filter to reference the partition column directly. Wrapping the partition column in a function (e.g., YEAR(date), DATE_TRUNC, CAST) breaks predicate pushdown because Spark cannot statically map the transformed value back to partition directories. Always filter on the raw partition column."
+  },
+  {
+    "id": 69,
+    "category": "Spark Optimization",
+    "question": "A Spark job writes to Delta with 200 shuffle partitions (default). The output has 200 small files per partition directory. What is the recommended approach to reduce small files?",
+    "options": [
+      "Reduce spark.sql.shuffle.partitions to 1",
+      "Use repartition(1) before writing to consolidate files",
+      "Run OPTIMIZE with AUTO COMPACT after writing",
+      "Enable Auto Optimize (optimizeWrite and autoCompact) on the Delta table"
+    ],
+    "correct": 3,
+    "explanation": "Databricks Delta's Auto Optimize features (optimizeWrite and autoCompact) handle small file problems automatically. optimizeWrite coalesces small files during the write operation itself. autoCompact runs OPTIMIZE in the background after writes. This is the idiomatic Databricks approach. repartition(1) creates a single large file which is also problematic."
+  },
+  {
+    "id": 70,
+    "category": "Medallion Architecture",
+    "question": "You ingest data into Bronze via Auto Loader with schema inference. After 3 months, a source system adds a new column. What is the expected behavior in a well-designed Medallion pipeline?",
+    "options": [
+      "The pipeline fails — new columns require manual schema migration at all layers",
+      "Bronze absorbs the new column via schema evolution; Silver must be updated to propagate it",
+      "Bronze ignores unknown columns; Silver and Gold are unaffected",
+      "The new column is automatically propagated through all layers without any changes"
+    ],
+    "correct": 1,
+    "explanation": "With addNewColumns mode, Auto Loader adds the new column to the Bronze table schema automatically. However, Silver transformations (SELECT statements, explicit column lists, transformations) typically need to be updated to include the new column. Gold may also need updates. Full automatic propagation only occurs if Silver uses SELECT * without transformations."
+  },
+  {
+    "id": 71,
+    "category": "Medallion Architecture",
+    "question": "Your Bronze table stores raw data with duplicates. Your Silver table uses MERGE INTO to deduplicate based on a primary key. A record is updated in the source system and arrives in Bronze twice (original + update). What Silver behavior is correct with a well-designed MERGE?",
+    "options": [
+      "Both records are inserted into Silver, preserving full history",
+      "The original record is kept; the update is dropped as a duplicate",
+      "The Silver record is updated to reflect the latest version based on the MERGE condition",
+      "MERGE fails with a duplicate key error"
+    ],
+    "correct": 2,
+    "explanation": "A well-designed Silver MERGE uses WHEN MATCHED THEN UPDATE to apply the latest version of a record and WHEN NOT MATCHED THEN INSERT to add new records. The original Bronze record triggers INSERT; the update triggers UPDATE. The Silver table reflects the current state — SCD Type 1 semantics."
+  },
+  {
+    "id": 72,
+    "category": "Databricks Jobs",
+    "question": "A Databricks Job has a For Each task iterating over 10 items, each running a notebook. Three notebook runs fail. What does the For Each task's status show?",
+    "options": [
+      "The For Each task fails immediately when the first iteration fails",
+      "The For Each task completes all 10 iterations, then reports partial failure with a summary",
+      "The For Each task retries failed iterations up to the job retry limit",
+      "The For Each task succeeds if more than 50% of iterations succeed"
+    ],
+    "correct": 1,
+    "explanation": "The For Each task runs all iterations regardless of individual failures. After all iterations complete, the task reports the number of successes and failures. The overall For Each task status is FAILED if any iteration fails, but it does not short-circuit — all iterations are always attempted."
+  },
+  {
+    "id": 73,
+    "category": "Databricks Jobs",
+    "question": "You define a job with a Python wheel task. The wheel is uploaded to a DBFS path. You update the wheel with a bug fix and re-upload to the same DBFS path. The job runs again. Which wheel version is used?",
+    "options": [
+      "The old version — DBFS caches wheel files and does not detect replacements",
+      "The new version — DBFS reads the file at job runtime, picking up the replacement",
+      "It depends on whether the job cluster was restarted between runs",
+      "The new version only if the job's library configuration was re-saved"
+    ],
+    "correct": 2,
+    "explanation": "Python wheels installed on job clusters are installed at cluster startup. If the cluster is reused across runs (unlikely for job clusters but possible) or if the wheel is cached, the old version may persist. For job clusters (new cluster per run), the wheel is reinstalled fresh each time, picking up the new version. The cluster lifecycle determines which version is used."
+  },
+  {
+    "id": 74,
+    "category": "Databricks Jobs",
+    "question": "A job is configured with a webhook notification on failure. The job's task fails but the job itself is marked as 'Succeeded' due to a 'Run if all dependencies succeeded' misconfiguration. Does the webhook fire?",
+    "options": [
+      "Yes — webhooks fire on task-level failures regardless of job status",
+      "No — webhooks are triggered by job-level status, not individual task status",
+      "Yes — but only if the webhook is explicitly configured for task-level events",
+      "No — webhooks only fire for job timeouts, not task failures"
+    ],
+    "correct": 1,
+    "explanation": "Databricks job webhooks and notification settings (email, webhook) are triggered by job-level outcomes (job succeeded, job failed, job started). If the overall job status is 'Succeeded' despite a task failing, the failure webhook does NOT fire. Task-level monitoring requires separate alerting via the jobs API or observability tools."
+  },
+  {
+    "id": 75,
+    "category": "Cluster & Compute",
+    "question": "You use init scripts on a cluster to install a custom library. The init script fails silently (exits 0 but the library is not installed). What is the impact?",
+    "options": [
+      "The cluster fails to start because init script validation detects the missing library",
+      "The cluster starts successfully, and the failure is only discovered when a job tries to use the library",
+      "Databricks retries the init script up to 3 times before marking the cluster as failed",
+      "The cluster logs a warning but proceeds with the standard library set"
+    ],
+    "correct": 1,
+    "explanation": "Init scripts that exit with code 0 are considered successful by Databricks, regardless of whether they accomplished their goal. The cluster starts normally. The silent failure is only discovered at runtime when the missing library is referenced. Always add explicit error handling and non-zero exit codes to init scripts for critical installations."
+  },
+  {
+    "id": 76,
+    "category": "Cluster & Compute",
+    "question": "A cluster policy restricts spark.executor.memory to a maximum of 8GB. A user submits a job with spark.executor.memory = 16GB in their cluster configuration. What happens?",
+    "options": [
+      "The cluster starts with 16GB — user configurations override policies",
+      "The cluster fails to start with a policy violation error",
+      "The cluster starts with 8GB — the policy overrides the user configuration silently",
+      "The user is prompted to request a policy exception before the cluster starts"
+    ],
+    "correct": 1,
+    "explanation": "Cluster policies enforce hard constraints on cluster configurations. If a user specifies a value that violates a policy restriction, the cluster creation or start request is rejected with a policy violation error. The policy does not silently override values — it blocks the operation entirely."
+  },
+  {
+    "id": 77,
+    "category": "Cluster & Compute",
+    "question": "You enable Photon on a cluster. A job runs a UDF-heavy PySpark pipeline. What is the expected impact of Photon?",
+    "options": [
+      "Photon accelerates all PySpark operations including UDFs",
+      "Photon has no effect — it only accelerates SQL workloads run via JDBC",
+      "Photon accelerates SQL and DataFrame operations but Python UDFs fall back to the JVM executor",
+      "Photon replaces the JVM entirely, eliminating Python serialization overhead"
+    ],
+    "correct": 2,
+    "explanation": "Photon is a vectorized query engine written in C++ that accelerates SQL and DataFrame operations. However, Python UDFs require serialization between the JVM and Python processes (via Py4J), which Photon cannot accelerate. UDF-heavy pipelines benefit minimally from Photon. Pandas UDFs (vectorized UDFs) perform better but still have serialization overhead."
+  },
+  {
+    "id": 78,
+    "category": "Databricks SQL",
+    "question": "A SQL Warehouse is set to Auto Stop after 10 minutes of inactivity. A long-running query takes 25 minutes. Mid-query, the 10-minute idle timer elapses. What happens?",
+    "options": [
+      "The warehouse stops and the query fails",
+      "The idle timer resets when a query is actively running — the warehouse does not stop",
+      "The warehouse stops after 10 minutes but the query continues on cached compute",
+      "The warehouse scales down to minimum size but continues the query"
+    ],
+    "correct": 1,
+    "explanation": "Auto Stop only triggers when the warehouse is truly idle — no queries running or queued. An actively running query resets and suspends the idle timer. The warehouse will not stop while a query is in progress. Auto Stop fires 10 minutes after the LAST query completes, not 10 minutes after the warehouse started."
+  },
+  {
+    "id": 79,
+    "category": "Databricks SQL",
+    "question": "Two users run identical queries on a SQL Warehouse simultaneously. The result cache is warm from a previous run 2 minutes ago. The underlying Delta table has not changed. What happens?",
+    "options": [
+      "Both users get results from the cache instantly",
+      "Only the first user gets cached results; the second triggers a fresh scan",
+      "The cache is invalidated because two simultaneous requests indicate stale data",
+      "Both users trigger a fresh scan — the cache does not serve concurrent requests"
+    ],
+    "correct": 0,
+    "explanation": "Databricks SQL result caching serves cached results to all users running the same query against an unchanged Delta table. Since the table has not been modified (no new Delta log entries), the cache remains valid and both users receive instant results from the cache, regardless of concurrency."
+  },
+  {
+    "id": 80,
+    "category": "Data Governance",
+    "question": "You want to audit all SELECT queries run against a specific table in Unity Catalog. Where do you find this information?",
+    "options": [
+      "The Delta transaction log of the table",
+      "The Databricks audit logs delivered to cloud storage",
+      "The Unity Catalog system tables (system.access.audit)",
+      "The SQL Warehouse query history filtered by table name"
+    ],
+    "correct": 2,
+    "explanation": "Unity Catalog system tables (specifically system.access.audit) capture detailed audit events including data access events at the table level. This provides a queryable, persistent audit trail. SQL Warehouse query history is limited to SQL Warehouse queries and does not cover notebook or job access. Audit logs to cloud storage are also valid but less queryable."
+  },
+  {
+    "id": 81,
+    "category": "Data Governance",
+    "question": "A table has 3 columns masked. A user runs SELECT col_a, col_b FROM table (not selecting the masked column). Is the masking function executed?",
+    "options": [
+      "Yes — masking functions run for all columns regardless of SELECT list",
+      "No — masking is only applied to columns explicitly included in the SELECT list",
+      "Yes — but only for row-level security evaluation purposes",
+      "No — masking functions only run if the user lacks SELECT on the table"
+    ],
+    "correct": 1,
+    "explanation": "Column masking in Unity Catalog is applied only to columns that appear in the query's SELECT list or are referenced in the query. If the masked column is not selected, its masking function is not invoked. This is an important performance consideration — masking functions with complex logic only run when the column is queried."
+  },
+  {
+    "id": 82,
+    "category": "Auto Loader",
+    "question": "Auto Loader is configured with cloudFiles.format = 'json' and cloudFiles.schemaHints = 'amount DECIMAL(18,2)'. A file arrives where amount is formatted as a string '1,234.56' (with comma). What happens?",
+    "options": [
+      "The value is parsed correctly as DECIMAL(18,2)",
+      "The value is rescued into _rescued_data because it cannot be cast to DECIMAL",
+      "Auto Loader strips the comma and parses correctly",
+      "The file is skipped with a format error"
+    ],
+    "correct": 1,
+    "explanation": "schemaHints specifies the target type but does not define parsing logic. '1,234.56' is not valid DECIMAL syntax — the comma makes it an unparseable string. The cast fails and the value lands in _rescued_data. Parsing locale-specific number formats requires explicit transformation after ingestion, not schema hints."
+  },
+  {
+    "id": 83,
+    "category": "Delta Lake",
+    "question": "You enable delta.enableChangeDataFeed = true on an existing Delta table that already has 1 million rows. A downstream consumer reads CDF starting from version 0. What does it see?",
+    "options": [
+      "All 1 million rows as 'insert' change events from version 0",
+      "Only changes made after CDF was enabled — pre-existing rows are not in the change feed",
+      "An error — CDF cannot be read from version 0 if it was enabled after version 0",
+      "All rows as 'insert' events replayed from the beginning of the table's history"
+    ],
+    "correct": 1,
+    "explanation": "Change Data Feed only captures changes from the version at which it was enabled onwards. Pre-existing data is not retroactively included in the feed. A consumer reading from version 0 (before CDF was enabled) would get an error for versions without CDF data. Consumers should start from the version when CDF was first enabled."
+  },
+  {
+    "id": 84,
+    "category": "Delta Lake",
+    "question": "You run CONVERT TO DELTA on a Parquet table. The table has partitions. What is a limitation of this operation?",
+    "options": [
+      "CONVERT TO DELTA does not support partitioned Parquet tables",
+      "CONVERT TO DELTA creates a Delta table but partition statistics are not populated until ANALYZE TABLE is run",
+      "CONVERT TO DELTA rewrites all Parquet files to Delta format, causing downtime",
+      "CONVERT TO DELTA requires specifying the partition schema explicitly if the table is partitioned"
+    ],
+    "correct": 3,
+    "explanation": "CONVERT TO DELTA on a partitioned Parquet table requires specifying the partition schema explicitly (e.g., CONVERT TO DELTA parquet.`path` PARTITIONED BY (date DATE)). Without this, Databricks cannot infer partition column types from directory names alone. The operation does not rewrite data files — it only adds Delta transaction log metadata."
+  },
+  {
+    "id": 85,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline reads from an external Delta table (not managed by DLT) using spark.read (batch). The external table is updated between pipeline runs. What does the DLT table see on each run?",
+    "options": [
+      "The state of the external table at the time the pipeline last ran",
+      "The current state of the external table at the time of each run",
+      "Only the changes to the external table since the last pipeline run",
+      "The initial snapshot of the external table from when the pipeline was first deployed"
+    ],
+    "correct": 1,
+    "explanation": "Using spark.read (batch read) in DLT reads the current state of the external table at the time of each pipeline run — it is a point-in-time snapshot of the latest version. For incremental reads, spark.readStream should be used instead. This means DLT Materialized Views based on batch reads always reflect the latest state of the source."
+  },
+  {
+    "id": 86,
+    "category": "DLT / Lakeflow",
+    "question": "You have a DLT pipeline with 5 tables. Table 3 fails during a run. What happens to Tables 4 and 5 which depend on Table 3?",
+    "options": [
+      "Tables 4 and 5 run using the last successful version of Table 3",
+      "Tables 4 and 5 are skipped for this run since their dependency failed",
+      "Tables 4 and 5 run independently if they have no other dependencies",
+      "Tables 4 and 5 fail with the same error as Table 3"
+    ],
+    "correct": 1,
+    "explanation": "DLT respects the dependency graph. If Table 3 fails, all downstream tables that depend on it (Tables 4 and 5) are skipped for that pipeline run — they do not run with stale data and do not independently fail. The pipeline reports the root failure at Table 3 and marks dependents as skipped."
+  },
+  {
+    "id": 87,
+    "category": "Unity Catalog",
+    "question": "You federate an external Hive Metastore into Unity Catalog as a foreign catalog. A user queries the foreign catalog. Where is the data actually processed?",
+    "options": [
+      "In the Unity Catalog metastore's compute layer",
+      "In the Databricks workspace cluster — Unity Catalog translates the query to the external system",
+      "Directly in the external Hive Metastore's compute environment",
+      "In a dedicated federation compute layer provisioned by Databricks"
+    ],
+    "correct": 1,
+    "explanation": "Lakehouse Federation (foreign catalogs) allows querying external systems through Unity Catalog. The query is executed by the Databricks workspace cluster using the connection details stored in Unity Catalog. The data is read directly from the source system by Databricks compute — not processed by the external system's engine."
+  },
+  {
+    "id": 88,
+    "category": "Unity Catalog",
+    "question": "A workspace admin tries to grant MANAGE on a table to a user. The admin does NOT own the table. Can they do this?",
+    "options": [
+      "Yes — workspace admins have implicit MANAGE on all objects",
+      "No — only the object owner or a metastore admin can grant MANAGE",
+      "Yes — workspace admins can grant any privilege on any object",
+      "No — MANAGE can only be granted by the metastore admin"
+    ],
+    "correct": 1,
+    "explanation": "In Unity Catalog, granting MANAGE on an object requires being the object owner or a metastore admin. Workspace admins do not automatically have ownership over all objects and cannot grant MANAGE unless they are also the owner or metastore admin. This is a common privilege escalation misconception."
+  },
+  {
+    "id": 89,
+    "category": "Databricks Asset Bundles",
+    "question": "You define a variable in databricks.yml and reference it in a job configuration. You run `databricks bundle deploy --target prod --var my_var=value`. What is the scope of this variable?",
+    "options": [
+      "The variable is stored in the workspace and persists across future deploys",
+      "The variable applies only to this deploy command invocation",
+      "The variable overrides the default only for the prod target permanently",
+      "The variable is stored in the bundle state file for future runs"
+    ],
+    "correct": 1,
+    "explanation": "Variables passed via --var are runtime overrides scoped to a single CLI command invocation. They are not persisted to databricks.yml, the workspace, or the bundle state. For persistent variable values per target, define them under the targets block in databricks.yml using the variables section."
+  },
+  {
+    "id": 90,
+    "category": "Databricks Asset Bundles",
+    "question": "A DAB defines a job that references a cluster policy by name. The policy exists in dev but not in prod. What happens when you deploy to prod?",
+    "options": [
+      "The deploy succeeds and the job uses the default cluster policy in prod",
+      "The deploy fails because the referenced cluster policy does not exist in prod",
+      "The deploy succeeds but the job fails on first run when it tries to create the cluster",
+      "The deploy creates the cluster policy in prod automatically"
+    ],
+    "correct": 1,
+    "explanation": "DABs validate referenced resources during deployment. If a cluster policy referenced by name does not exist in the target workspace, the deploy fails with a resource not found error. This is intentional — DABs enforce that all dependencies exist before deploying dependent resources."
+  },
+  {
+    "id": 91,
+    "category": "Spark Optimization",
+    "question": "You broadcast a table that is 500MB using broadcast(). The default spark.sql.autoBroadcastJoinThreshold is 10MB. What happens?",
+    "options": [
+      "The broadcast fails — you cannot override the threshold with a hint for tables over 10MB",
+      "The broadcast succeeds — the hint overrides the threshold and forces a BroadcastHashJoin",
+      "Spark broadcasts only up to 10MB and falls back to SortMergeJoin for the rest",
+      "The broadcast succeeds only if the executor memory exceeds 500MB per executor"
+    ],
+    "correct": 1,
+    "explanation": "The broadcast() hint explicitly forces a BroadcastHashJoin regardless of the autoBroadcastJoinThreshold setting. The threshold only affects automatic broadcast decisions. Manual hints override it. However, broadcasting a 500MB table may cause OOM on driver (which collects the broadcast) and executor memory pressure — use with caution."
+  },
+  {
+    "id": 92,
+    "category": "Spark Optimization",
+    "question": "You use df.persist(StorageLevel.DISK_ONLY). The persisted data is later needed. What is the performance implication compared to MEMORY_AND_DISK?",
+    "options": [
+      "DISK_ONLY is faster because it avoids GC overhead from heap usage",
+      "DISK_ONLY has higher access latency — data must be deserialized from disk on each access",
+      "DISK_ONLY and MEMORY_AND_DISK have identical performance when memory is sufficient",
+      "DISK_ONLY automatically upgrades to MEMORY_ONLY when memory is available"
+    ],
+    "correct": 1,
+    "explanation": "DISK_ONLY persistence serializes data to local executor disk. Each access requires disk I/O and deserialization, resulting in higher latency than memory access. MEMORY_AND_DISK uses memory first, spilling to disk only when memory is insufficient. DISK_ONLY is useful when memory is constrained and disk I/O latency is acceptable."
+  },
+  {
+    "id": 93,
+    "category": "Spark Optimization",
+    "question": "A DataFrame operation chain has 5 transformations (all lazy) followed by df.count(). You add df.explain(True) before count(). What does explain() trigger?",
+    "options": [
+      "explain() triggers the full computation to generate accurate statistics",
+      "explain() only analyzes the logical and physical plan without executing the job",
+      "explain() executes the first stage only to generate partial statistics",
+      "explain() is equivalent to count() and triggers full execution"
+    ],
+    "correct": 1,
+    "explanation": "explain() is a lazy operation that prints the query plan (parsed, analyzed, optimized logical, and physical plan) without triggering any computation. It is purely a planning introspection tool. No Spark jobs are submitted. This makes it safe to call on expensive pipelines for debugging without incurring compute costs."
+  },
+  {
+    "id": 94,
+    "category": "Medallion Architecture",
+    "question": "Your Gold layer is a business aggregate used by a BI dashboard. The dashboard requires sub-second query times on 100M row aggregates. Which approach is MOST appropriate?",
+    "options": [
+      "Increase the SQL Warehouse cluster size to handle the aggregation at query time",
+      "Pre-aggregate at Gold layer write time and store results as a smaller summary table",
+      "Enable ZORDER on all columns queried by the dashboard",
+      "Use Delta caching on the Gold table to accelerate repeated reads"
+    ],
+    "correct": 1,
+    "explanation": "Sub-second BI response times on 100M row aggregates are best achieved by pre-computing aggregations at write time into a smaller Gold summary table. Runtime aggregation of 100M rows will never be sub-second regardless of cluster size. Pre-aggregated tables serve as materialized reports — the BI tool reads pre-computed results directly."
+  },
+  {
+    "id": 95,
+    "category": "Medallion Architecture",
+    "question": "A late-arriving record arrives at Bronze 3 days after its event_time. The Silver table uses event_time-based watermarking in a streaming job with a 1-day watermark. What happens to the late record?",
+    "options": [
+      "The record is processed normally — watermarking only affects aggregations, not raw ingestion",
+      "The record is dropped by the Silver streaming job because it falls outside the watermark",
+      "The record is flagged as late but still processed and written to Silver",
+      "The record triggers a recomputation of the affected Silver window"
+    ],
+    "correct": 1,
+    "explanation": "Spark Structured Streaming watermarks define the maximum lateness a system will tolerate. With a 1-day watermark, records arriving more than 1 day late (relative to the current watermark) are silently dropped in stateful aggregation operations. A record 3 days late exceeds the 1-day threshold and is dropped. Watermark behavior applies to stateful operations (windowed aggregations, stream-stream joins)."
+  },
+  {
+    "id": 96,
+    "category": "Databricks Jobs",
+    "question": "A job is triggered via the REST API with a custom notebook parameter. The notebook uses dbutils.widgets.get('param') to read the value. The parameter is not passed in the API call. What happens?",
+    "options": [
+      "The notebook uses the widget's default value if one was defined",
+      "The notebook fails with a widget not found error",
+      "The notebook receives an empty string for the parameter",
+      "The API call fails validation before the job starts"
+    ],
+    "correct": 0,
+    "explanation": "dbutils.widgets.get() returns the widget's default value if the parameter was not provided at runtime — assuming the widget was defined with a default (e.g., dbutils.widgets.text('param', 'default_value')). If no default was set, it throws an InputWidgetNotDefined exception. The behavior depends entirely on how the widget is defined in the notebook."
+  },
+  {
+    "id": 97,
+    "category": "Cluster & Compute",
+    "question": "You configure a cluster with driver node type r6g.4xlarge (128GB RAM) and worker node type m5.xlarge (16GB RAM). A Spark job collects results to the driver using df.collect(). The result set is 200GB. What happens?",
+    "options": [
+      "The driver writes overflow to DBFS automatically",
+      "The driver crashes with OOM — collect() loads all data into driver memory",
+      "Spark automatically distributes the result back to workers to avoid driver OOM",
+      "Spark returns only the first 128GB and truncates the rest"
+    ],
+    "correct": 1,
+    "explanation": "df.collect() brings ALL data to the driver as a Python list in memory. A 200GB result set exceeds the 128GB driver RAM and causes an OOM error. collect() should only be used on small datasets. For large result sets, write to storage (Delta table, CSV) instead of collecting to the driver."
+  },
+  {
+    "id": 98,
+    "category": "Cluster & Compute",
+    "question": "A Databricks Runtime ML cluster is required for a job. You accidentally use a Standard Databricks Runtime cluster. Which specific capability is unavailable?",
+    "options": [
+      "PySpark and SparkML libraries",
+      "Pre-installed ML libraries (MLflow, PyTorch, TensorFlow, scikit-learn)",
+      "GPU acceleration",
+      "Delta Lake read/write operations"
+    ],
+    "correct": 1,
+    "explanation": "Databricks Runtime ML clusters come pre-installed with ML frameworks (MLflow, TensorFlow, PyTorch, scikit-learn, XGBoost, etc.) and are optimized for ML workloads. Standard Runtime lacks these pre-installed libraries — you would need to manually install them. PySpark, SparkML, and Delta Lake are available on Standard Runtime."
+  },
+  {
+    "id": 99,
+    "category": "Data Governance",
+    "question": "You tag a Delta table with a PII tag in Unity Catalog. What is the functional effect of the tag on data access?",
+    "options": [
+      "The tag automatically encrypts the table's data at rest",
+      "The tag restricts access to users with a PII-access attribute",
+      "Tags are metadata only — they have no direct effect on access control or encryption",
+      "The tag triggers automatic column masking on all string columns"
+    ],
+    "correct": 2,
+    "explanation": "Tags in Unity Catalog are metadata labels used for data discovery, classification, and governance workflows. They have no inherent functional effect on access control, encryption, or masking. Tags must be combined with explicit policies (column masks, row filters, RBAC) to enforce data protection. They are classification tools, not enforcement mechanisms."
+  },
+  {
+    "id": 100,
+    "category": "Data Governance",
+    "question": "You use system.access.audit to query who accessed a table in the last 30 days. The audit table shows no records for the table. What is the most likely reason?",
+    "options": [
+      "The table was accessed only via notebook — audit only captures SQL Warehouse queries",
+      "Audit log ingestion may have a delay of up to 2 hours; records may not be fully populated",
+      "system.access.audit only captures failed access attempts, not successful ones",
+      "Audit logging is not enabled by default — a metastore admin must enable it"
+    ],
+    "correct": 3,
+    "explanation": "Unity Catalog system tables including system.access.audit require explicit enablement by a metastore admin (enabling the system schema and audit log delivery). If audit logging was not enabled, no records are captured. Once enabled, there is typically a delay in log delivery, but the primary reason for zero records over 30 days is that auditing was not enabled."
+  }
+]
+
+
