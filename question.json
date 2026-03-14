@@ -223,7 +223,7 @@
   {
     "id": 18,
     "category": "Medallion Architecture",
-    "question": "In a Medallion architecture, a Silver table is defined as a Streaming Table in DLT reading from a Bronze Streaming Table. The Bronze table receives a large backfill of historical data. What happens to the Silver table?",
+    "question": "In a Medallion architecture, a Silver table is defined as a Streaming Table in DLT reading from a Bronze Streaming Table. The Bronze table receives a large backfill of historical data via INSERT. What happens to the Silver table?",
     "options": [
       "The Silver table ignores the backfill — streaming tables only process new data",
       "The Silver table automatically processes the backfill in micro-batches",
@@ -231,7 +231,7 @@
       "The Silver table processes the backfill only if APPLY CHANGES INTO is used"
     ],
     "correct": 1,
-    "explanation": "DLT Streaming Tables use Auto Loader or Delta streaming sources that track watermarks/offsets. New data appended to Bronze (even as a backfill) is treated as new records to process. The Silver streaming table will automatically consume the backfill in subsequent pipeline runs without manual intervention."
+    "explanation": "DLT Streaming Tables use Auto Loader or Delta streaming sources that track watermarks/offsets. New data appended to Bronze (via INSERT backfill) is treated as new records to process. The Silver streaming table will automatically consume the backfill in subsequent pipeline runs without manual intervention. Note: If the backfill used MERGE or UPDATE, the behavior may differ."
   },
   {
     "id": 19,
@@ -335,7 +335,7 @@
       "Auto Loader restarts schema inference from scratch on every run"
     ],
     "correct": 2,
-    "explanation": "Once a schema is inferred and stored in the schemaLocation, Auto Loader does not re-infer types on subsequent runs. Type conflicts with the stored schema result in the offending values being rescued into _rescued_data. To change the inferred type, you must manually update or delete the schema file in schemaLocation."
+    "explanation": "Schema inference with cloudFiles.inferColumnTypes is ONE-TIME, happening only on the first run. The inferred schema is stored in schemaLocation and reused thereafter. Subsequent type conflicts (like strings in a LongType column) cause the offending values to be rescued into _rescued_data. To change types, manually update or delete the schema file."
   },
   {
     "id": 27,
@@ -535,7 +535,7 @@
   {
     "id": 42,
     "category": "Medallion Architecture",
-    "question": "A Gold table is a Materialized View aggregating Silver data. Silver data is corrected via an UPDATE (late-arriving correction). How does this affect the Gold Materialized View in DLT?",
+    "question": "A Gold table is a Materialized View aggregating a Silver Streaming Table. Silver data is corrected via an UPDATE (late-arriving correction). How does this affect the Gold Materialized View in DLT?",
     "options": [
       "The Gold view reflects the correction automatically in real time",
       "The Gold view reflects the correction on the next full pipeline refresh",
@@ -543,7 +543,7 @@
       "The Gold view must be manually dropped and recreated to reflect the correction"
     ],
     "correct": 1,
-    "explanation": "DLT Materialized Views are fully recomputed on each pipeline run. On the next run, the Silver correction is included in the recomputation and the Gold view reflects the updated data. This full-refresh semantic is why Materialized Views are suitable for correction-prone data, at the cost of recomputation overhead."
+    "explanation": "DLT Materialized Views are fully recomputed on each pipeline run. When Silver (a Streaming Table) is updated with the correction, the next Gold MV refresh includes that updated data. This full-refresh semantic is why Materialized Views work well with correction-prone Silver layers, at the cost of recomputation overhead."
   },
   {
     "id": 43,
@@ -751,7 +751,7 @@
       "table_a reprocesses only the last 7 days of source data"
     ],
     "correct": 0,
-    "explanation": "A FULL REFRESH on a DLT pipeline truncates and repopulates ALL tables in the pipeline, including Streaming Tables. The checkpoint is also reset, causing Auto Loader or Delta streaming sources to reprocess from the beginning. This is an expensive operation and should be used carefully in production."
+    "explanation": "FULL REFRESH on a DLT pipeline resets the checkpoint for ALL tables including Streaming Tables. This causes Auto Loader and Delta streaming sources to reprocess all data from the beginning. The effect is table_a being repopulated from scratch. This is an expensive operation and should be used carefully in production."
   },
   {
     "id": 59,

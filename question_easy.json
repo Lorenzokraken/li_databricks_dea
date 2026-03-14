@@ -304,12 +304,12 @@
     "question": "What does APPLY CHANGES INTO do in a DLT pipeline?",
     "options": [
       "It applies schema changes from the source to the target table automatically",
-      "It processes CDC (Change Data Capture) events to maintain an up-to-date target table",
+      "It processes CDC (Change Data Capture) events to maintain Slowly Changing Dimensions (SCD)",
       "It applies OPTIMIZE and VACUUM to the target table after each run",
       "It merges two DLT pipelines into a single unified pipeline"
     ],
     "correct": 1,
-    "explanation": "APPLY CHANGES INTO processes CDC events (inserts, updates, deletes) and applies them to a target table, maintaining current state. It handles ordering via SEQUENCE BY and supports SCD Type 1 and Type 2 patterns."
+    "explanation": "APPLY CHANGES INTO processes CDC events (inserts, updates, deletes) to maintain Slowly Changing Dimensions (SCD). It handles ordering via SEQUENCE BY and supports both SCD Type 1 (overwriting current values) and SCD Type 2 (maintaining historical records with validity timestamps)."
   },
   {
     "id": 25,
