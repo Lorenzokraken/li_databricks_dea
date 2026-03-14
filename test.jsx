@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 const questions = [];
-const CORRECT_PASSWORD = "dbex2026";
+const CORRECT_PASSWORD = "Biricchino100€";
 
 export default function DatabricksQuiz() {
   const [parsedQuestions, setParsedQuestions] = useState([]);

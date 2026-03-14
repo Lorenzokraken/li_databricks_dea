@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DatabricksLogo from "./Databricks-logo.svg.png";
 
 const questions = [];
-const CORRECT_PASSWORD = "dbex2026";
+const CORRECT_PASSWORD = "Biricchino100€";
 const MAX_QUESTIONS_PER_SESSION = 25;
 const PASSING_THRESHOLD = 0.78;
 
