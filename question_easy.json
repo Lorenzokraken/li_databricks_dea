@@ -648,5 +648,655 @@
     ],
     "correct": 1,
     "explanation": "For large JDBC tables, parallelizing reads using partitionColumn (a numeric or date column), lowerBound, upperBound, and numPartitions splits the table into multiple partitions read concurrently by different Spark tasks. Single-partition reads are a bottleneck for large tables."
+  },
+  {
+    "id": 51,
+    "category": "Databricks Platform",
+    "question": "A company has multiple Databricks workspaces across two cloud regions. They want centralized governance for all data assets. What is the correct Unity Catalog deployment?",
+    "options": [
+      "Deploy one metastore per workspace for isolation",
+      "Deploy one metastore per region and attach all workspaces in that region to it",
+      "Deploy one metastore per cloud account and attach all workspaces to it",
+      "Deploy one metastore globally shared across all cloud accounts"
+    ],
+    "correct": 2,
+    "explanation": "A Unity Catalog metastore is scoped to a cloud region within a Databricks account. Each workspace in a region can be attached to one metastore. For multi-region setups, one metastore per region is required, with data sharing across metastores via Delta Sharing if needed."
+  },
+  {
+    "id": 52,
+    "category": "Databricks Platform",
+    "question": "Which of the following is a characteristic of Serverless compute in Databricks?",
+    "options": [
+      "The user manages cluster sizing and autoscaling configuration",
+      "Compute resources are provisioned and managed by Databricks in Databricks-owned infrastructure",
+      "Serverless compute only supports SQL workloads",
+      "Serverless clusters persist between job runs to reduce startup time"
+    ],
+    "correct": 1,
+    "explanation": "Serverless compute in Databricks provisions resources in Databricks-managed infrastructure, eliminating the need for users to configure or manage clusters. It offers instant startup, automatic scaling, and per-second billing."
+  },
+  {
+    "id": 53,
+    "category": "Databricks Platform",
+    "question": "What is the purpose of a Databricks cluster policy?",
+    "options": [
+      "To define which users can log into the Databricks workspace",
+      "To restrict and standardize cluster configurations available to users",
+      "To set data retention policies for Delta tables",
+      "To define network policies for cluster connectivity"
+    ],
+    "correct": 1,
+    "explanation": "Cluster policies restrict the cluster configurations users can select (e.g., max node count, allowed instance types, required spark configs). They ensure cost control and compliance by preventing users from creating overly large or misconfigured clusters."
+  },
+  {
+    "id": 54,
+    "category": "Databricks Platform",
+    "question": "A data engineer wants to share a notebook with an external partner who does not have a Databricks account. Which feature enables this?",
+    "options": [
+      "Databricks Repos — share the Git repository",
+      "Published notebook snapshots via the Databricks UI share link",
+      "Delta Sharing for notebook distribution",
+      "Databricks Connect for external access"
+    ],
+    "correct": 1,
+    "explanation": "Databricks notebooks can be published as read-only snapshots accessible via a public URL. This allows sharing notebook content (including outputs) with external stakeholders who do not have Databricks access."
+  },
+  {
+    "id": 55,
+    "category": "Development & Ingestion",
+    "question": "A data engineer uses spark.readStream.format('cloudFiles') to ingest CSV files. Some files have headers and some do not. Which option handles this correctly?",
+    "options": [
+      "cloudFiles.headerMode = 'auto'",
+      "Set header = true and use cloudFiles.schemaHints to define the schema explicitly",
+      "Auto Loader cannot handle mixed CSV files — all files must have consistent headers",
+      "Set cloudFiles.schemaEvolutionMode = 'rescue' to handle headerless files"
+    ],
+    "correct": 1,
+    "explanation": "For CSV files without consistent headers, define the schema explicitly using schemaHints or a user-defined schema, and set header = false (or handle per-file). Auto Loader does not auto-detect per-file header presence — the engineer must standardize the source or define the schema explicitly."
+  },
+  {
+    "id": 56,
+    "category": "Development & Ingestion",
+    "question": "Which statement correctly describes the checkpointLocation in Auto Loader?",
+    "options": [
+      "It stores the schema inferred from source files",
+      "It tracks which files have been processed to enable exactly-once ingestion",
+      "It caches the most recently ingested batch for fast recovery",
+      "It stores the target Delta table's transaction log"
+    ],
+    "correct": 1,
+    "explanation": "The checkpointLocation stores the list of processed files and the streaming offset. On restart, Auto Loader reads the checkpoint to determine which files to skip (already processed) and which to process next, enabling exactly-once file ingestion."
+  },
+  {
+    "id": 57,
+    "category": "Development & Ingestion",
+    "question": "A COPY INTO command is run on a path that has already been fully loaded. New files are then added to the path. What happens when COPY INTO is run again?",
+    "options": [
+      "COPY INTO reloads all files including already processed ones",
+      "COPY INTO loads only the new files added since the last run",
+      "COPY INTO fails because the target table already has data",
+      "COPY INTO requires a FORCE option to load new files"
+    ],
+    "correct": 1,
+    "explanation": "COPY INTO maintains a record of loaded files. On subsequent runs, it skips already-processed files and loads only new ones. This makes it idempotent and incremental without additional configuration."
+  },
+  {
+    "id": 58,
+    "category": "Development & Ingestion",
+    "question": "A data engineer wants to ingest a Kafka stream and write to a Delta table, ensuring each event is processed exactly once. Which sink configuration achieves this?",
+    "options": [
+      "Write to Delta with outputMode('append') and enable checkpointing",
+      "Write to Delta with outputMode('complete') to overwrite on each batch",
+      "Write to Delta using foreachBatch with a custom deduplication MERGE",
+      "Both A and C — Delta + checkpoint provides exactly-once; foreachBatch adds extra safety"
+    ],
+    "correct": 0,
+    "explanation": "Structured Streaming with Delta Lake sink and a checkpoint provides end-to-end exactly-once semantics. Delta's idempotent write support combined with Spark's offset tracking ensures no duplicates or data loss on restart."
+  },
+  {
+    "id": 59,
+    "category": "Development & Ingestion",
+    "question": "What is the role of the _rescued_data column in Auto Loader?",
+    "options": [
+      "It stores rows that were rejected due to schema validation failures",
+      "It captures field values that could not be parsed or do not fit the inferred schema",
+      "It stores duplicate records identified during ingestion",
+      "It is a system column added to all Delta tables automatically"
+    ],
+    "correct": 1,
+    "explanation": "_rescued_data is a special column added by Auto Loader to capture any data that cannot be mapped to the inferred schema — including type mismatches, unknown fields (when addNewColumns is not set), or malformed values. This ensures no data is silently lost."
+  },
+  {
+    "id": 60,
+    "category": "Development & Ingestion",
+    "question": "A data engineer needs to read data from multiple source tables in a JDBC database in parallel. Which Spark configuration parameter controls the number of parallel read partitions?",
+    "options": [
+      "spark.sql.shuffle.partitions",
+      "numPartitions in the JDBC read options",
+      "spark.default.parallelism",
+      "jdbcParallelReads in the connection string"
+    ],
+    "correct": 1,
+    "explanation": "The numPartitions option in spark.read.jdbc controls how many parallel partitions Spark creates to read the JDBC source. Combined with partitionColumn, lowerBound, and upperBound, it splits the read into numPartitions parallel tasks."
+  },
+  {
+    "id": 61,
+    "category": "Data Processing",
+    "question": "A Delta table has partitionBy('country'). A query filters WHERE country = 'IT'. What optimization does Spark apply?",
+    "options": [
+      "ZORDER-based data skipping within the country partition",
+      "Partition pruning — only the 'IT' partition directory is scanned",
+      "Bloom filter lookup for the 'IT' value",
+      "Broadcast join with a country lookup table"
+    ],
+    "correct": 1,
+    "explanation": "Partition pruning allows Spark to skip all partition directories except 'IT'. Only files in the country=IT/ directory are read, dramatically reducing I/O for selective country filters on large datasets."
+  },
+  {
+    "id": 62,
+    "category": "Data Processing",
+    "question": "Which Delta Lake write mode completely replaces the existing table data and schema?",
+    "options": [
+      ".mode('overwrite').option('mergeSchema', 'true')",
+      ".mode('overwrite').option('overwriteSchema', 'true')",
+      ".mode('overwrite') with default settings",
+      ".mode('overwrite').option('replaceWhere', 'true')"
+    ],
+    "correct": 1,
+    "explanation": "overwriteSchema = true allows overwriting both the data AND the schema of the target Delta table. Regular overwrite mode replaces data but raises an error if the new schema is incompatible. mergeSchema adds new columns but does not replace the schema."
+  },
+  {
+    "id": 63,
+    "category": "Data Processing",
+    "question": "A data engineer uses INSERT OVERWRITE on a partitioned Delta table with a WHERE clause. What is the effect?",
+    "options": [
+      "It overwrites the entire table regardless of the WHERE clause",
+      "It overwrites only the partitions that match the WHERE clause (dynamic partition overwrite)",
+      "It appends data to matching partitions",
+      "It is not supported — WHERE is not valid with INSERT OVERWRITE on Delta"
+    ],
+    "correct": 1,
+    "explanation": "With spark.sql.sources.partitionOverwriteMode = 'dynamic' (or replaceWhere in the DataFrame API), INSERT OVERWRITE with a partition filter only replaces the matching partitions, leaving other partitions untouched. This is safe for incremental partition replacement."
+  },
+  {
+    "id": 64,
+    "category": "Data Processing",
+    "question": "What does the Delta Lake RESTORE command do?",
+    "options": [
+      "It repairs a corrupted Delta transaction log",
+      "It rolls back the table to a previous version or timestamp, making it the new current version",
+      "It restores deleted files from cloud storage recycle bin",
+      "It rebuilds table statistics after data corruption"
+    ],
+    "correct": 1,
+    "explanation": "RESTORE TABLE table_name TO VERSION AS OF x (or TIMESTAMP AS OF t) rolls back the table to a previous state and records a new transaction log entry making that restored state the new current version. The operation requires that data files for the target version still exist (not vacuumed)."
+  },
+  {
+    "id": 65,
+    "category": "Data Processing",
+    "question": "A Spark DataFrame has a skewed column where 90% of rows have the key value 'unknown'. A join on this column causes a long-running task. What is the manual approach to fix this without AQE?",
+    "options": [
+      "Add ZORDER on the join column to colocate data",
+      "Salt the skewed key by appending a random number, join with the exploded counterpart, then drop the salt",
+      "Repartition both DataFrames to 1 partition before joining",
+      "Switch from inner join to left join to reduce the skew impact"
+    ],
+    "correct": 1,
+    "explanation": "Salting distributes skewed keys by appending a random suffix (e.g., 'unknown_0', 'unknown_1'...) to the skewed DataFrame, then exploding the small DataFrame to create matching suffixed keys. After the join, the salt is dropped. This parallelizes what was a single large task."
+  },
+  {
+    "id": 66,
+    "category": "Data Processing",
+    "question": "Which function is used in PySpark to apply a Python function to each partition of a DataFrame efficiently?",
+    "options": [
+      "df.map()",
+      "df.mapPartitions()",
+      "df.rdd.mapPartitions()",
+      "df.foreachPartition()"
+    ],
+    "correct": 2,
+    "explanation": "rdd.mapPartitions() applies a function to each RDD partition, returning a new RDD. It reduces per-row Python overhead by batching processing at the partition level. foreachPartition() is for side effects (no return value). For DataFrames, Pandas UDFs (vectorized UDFs) are generally preferred over RDD operations."
+  },
+  {
+    "id": 67,
+    "category": "Data Processing",
+    "question": "A data engineer needs to calculate a rolling 7-day average of sales per customer. Which Spark SQL feature is most appropriate?",
+    "options": [
+      "GROUP BY with a 7-day date range filter",
+      "Window functions with ROWS BETWEEN 6 PRECEDING AND CURRENT ROW",
+      "A self-join on the sales table with a date difference filter",
+      "A DLT Materialized View with a 7-day aggregate"
+    ],
+    "correct": 1,
+    "explanation": "Spark SQL window functions with a frame specification (ROWS BETWEEN 6 PRECEDING AND CURRENT ROW partitioned by customer and ordered by date) compute rolling aggregations efficiently without self-joins or subqueries."
+  },
+  {
+    "id": 68,
+    "category": "Data Processing",
+    "question": "What is the behavior of spark.sql.shuffle.partitions = 200 (default) for a small DataFrame with 1MB of shuffle data?",
+    "options": [
+      "Spark automatically reduces partitions to match the data size",
+      "200 partitions are created, many of which will be near-empty, causing small file overhead",
+      "Spark merges partitions dynamically to avoid empty partitions",
+      "The setting is ignored for DataFrames smaller than 1GB"
+    ],
+    "correct": 1,
+    "explanation": "The default 200 shuffle partitions are created regardless of data size. For small DataFrames, this results in many near-empty or empty partitions, adding overhead. AQE (enabled by default in DBR 7+) can coalesce these automatically; without AQE, manually reduce spark.sql.shuffle.partitions."
+  },
+  {
+    "id": 69,
+    "category": "DLT / Lakeflow",
+    "question": "In DLT, what is the difference between @dlt.table and @dlt.view?",
+    "options": [
+      "@dlt.table persists results to Delta storage; @dlt.view is a logical intermediate that is not persisted",
+      "@dlt.view supports streaming; @dlt.table does not",
+      "@dlt.table requires Unity Catalog; @dlt.view works with Hive metastore only",
+      "There is no functional difference — they are interchangeable aliases"
+    ],
+    "correct": 0,
+    "explanation": "@dlt.table creates a persisted Delta table (Materialized View or Streaming Table) stored in the pipeline's storage location. @dlt.view defines a logical, non-persisted transformation used as an intermediate step — it is recomputed each time it is referenced and not stored."
+  },
+  {
+    "id": 70,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline uses APPLY CHANGES INTO with STORED AS SCD TYPE 2. What additional columns does DLT add to the target table?",
+    "options": [
+      "__START_AT and __END_AT to track the validity period of each record version",
+      "__CHANGE_TYPE and __COMMIT_TIMESTAMP",
+      "__CURRENT_FLAG and __VERSION_NUMBER",
+      "__INSERT_DATE and __EXPIRY_DATE"
+    ],
+    "correct": 0,
+    "explanation": "For SCD Type 2, APPLY CHANGES INTO adds __START_AT (when the record version became active) and __END_AT (when it was superseded, NULL for current records). These columns track the full history of each key's attribute changes over time."
+  },
+  {
+    "id": 71,
+    "category": "DLT / Lakeflow",
+    "question": "A DLT pipeline reads from an Auto Loader source. You want to reprocess all historical files from scratch. Which action achieves this?",
+    "options": [
+      "Delete all files from the source path and re-ingest",
+      "Trigger a Full Refresh on the pipeline",
+      "Set cloudFiles.maxFilesPerTrigger = -1 to disable file tracking",
+      "Manually delete the checkpoint location and redeploy the pipeline"
+    ],
+    "correct": 1,
+    "explanation": "Triggering a Full Refresh on a DLT pipeline clears the pipeline checkpoint and truncates all tables, causing the pipeline to reprocess all source data from scratch. This is the correct managed approach — manually deleting checkpoints outside DLT can leave the pipeline in an inconsistent state."
+  },
+  {
+    "id": 72,
+    "category": "DLT / Lakeflow",
+    "question": "Which Python DLT decorator creates a table that processes data incrementally from an append-only source?",
+    "options": [
+      "@dlt.table",
+      "@dlt.view",
+      "@dlt.append_flow",
+      "@dlt.table combined with spark.readStream"
+    ],
+    "correct": 3,
+    "explanation": "A DLT Streaming Table is created by defining a @dlt.table function that returns a streaming DataFrame (using spark.readStream). The combination of the decorator and the streaming read determines that DLT treats it as an incremental Streaming Table rather than a fully-refreshed Materialized View."
+  },
+  {
+    "id": 73,
+    "category": "DLT / Lakeflow",
+    "question": "What does the event_log() function return in a DLT context?",
+    "options": [
+      "The Spark event log stored in the cluster driver",
+      "A queryable table of pipeline execution events including data quality metrics, errors, and run history",
+      "The Delta transaction log of the target table",
+      "A log of all SQL statements executed by the pipeline"
+    ],
+    "correct": 1,
+    "explanation": "event_log() is a DLT system function that exposes the pipeline's event log as a queryable DataFrame or table. It contains pipeline run metadata, data quality constraint results, error messages, and execution metrics — useful for operational monitoring and alerting."
+  },
+  {
+    "id": 74,
+    "category": "DLT / Lakeflow",
+    "question": "In a DLT pipeline, a Streaming Table reads from Bronze and a Materialized View reads from that Streaming Table. The pipeline is triggered. In what order are they updated?",
+    "options": [
+      "Materialized View first, then Streaming Table",
+      "Both are updated in parallel simultaneously",
+      "Streaming Table first, then Materialized View",
+      "The order depends on the pipeline's topological sort configuration"
+    ],
+    "correct": 2,
+    "explanation": "DLT resolves the dependency graph and executes tables in topological order. Since the Materialized View depends on the Streaming Table, the Streaming Table must be updated first. DLT manages this automatically without any engineer configuration."
+  },
+  {
+    "id": 75,
+    "category": "Productionizing Pipelines",
+    "question": "A Databricks Job cluster is configured with spot instances. A spot instance is reclaimed mid-job. What is the DEFAULT Databricks behavior?",
+    "options": [
+      "The job automatically migrates to on-demand instances and continues",
+      "The job fails and must be manually retriggered",
+      "Databricks retries the affected tasks on new spot instances automatically",
+      "The job pauses and waits up to 30 minutes for spot availability"
+    ],
+    "correct": 1,
+    "explanation": "By default, if spot instances are reclaimed and no on-demand fallback is configured, the job cluster terminates and the job fails. Automatic fallback to on-demand requires explicit configuration of the spot_bid_price_percent and on-demand fallback settings in the cluster config."
+  },
+  {
+    "id": 76,
+    "category": "Productionizing Pipelines",
+    "question": "What is the purpose of databricks bundle run in a DAB workflow?",
+    "options": [
+      "It runs all unit tests defined in the bundle",
+      "It triggers a job or pipeline defined in the bundle in the target workspace",
+      "It deploys and immediately runs the bundle in a single step",
+      "It runs bundle validate and deploy sequentially"
+    ],
+    "correct": 1,
+    "explanation": "databricks bundle run <resource_name> triggers execution of a specific job or pipeline already deployed to the target workspace. It is separate from bundle deploy (which deploys configuration) — run triggers actual execution."
+  },
+  {
+    "id": 77,
+    "category": "Productionizing Pipelines",
+    "question": "A Databricks Job has 3 retries configured. The job fails on all 3 retries. How many total job run attempts appear in the run history?",
+    "options": [
+      "1 — all retries are tracked as sub-attempts of the same run record",
+      "3 — one record per retry attempt",
+      "4 — one for the original run plus 3 retry records",
+      "It depends on whether the retries were triggered automatically or manually"
+    ],
+    "correct": 0,
+    "explanation": "Databricks tracks all retry attempts within a single job run record. The run history shows one entry for the overall run, with retry attempts visible as sub-attempts in the run detail view. The total run count in history is 1, not 1 + retries."
+  },
+  {
+    "id": 78,
+    "category": "Productionizing Pipelines",
+    "question": "You want to monitor a Databricks Job and alert when it exceeds a maximum run duration. Which feature supports this?",
+    "options": [
+      "Set spark.sql.timeout in the job cluster configuration",
+      "Configure a job timeout in the job settings and set up an alert on timeout status",
+      "Use a DLT pipeline with a duration constraint",
+      "Create a separate monitoring job that checks run duration via the Jobs API"
+    ],
+    "correct": 1,
+    "explanation": "Databricks Jobs support a configurable maximum run duration (timeout). When a run exceeds this duration, it is automatically cancelled with a TIMEOUT status. Notification settings can alert on this status via email or webhook."
+  },
+  {
+    "id": 79,
+    "category": "Productionizing Pipelines",
+    "question": "In the Spark UI, what does a high 'Shuffle Write' value in a stage indicate?",
+    "options": [
+      "The stage is writing large amounts of data to Delta Lake",
+      "The stage is producing large amounts of intermediate data that must be transferred across the network for the next stage",
+      "The cluster is running low on disk space",
+      "The stage has too many parallel tasks"
+    ],
+    "correct": 1,
+    "explanation": "Shuffle Write measures the amount of data a stage produces and writes to disk for consumption by downstream stages. High shuffle write indicates a large data transfer between stages (e.g., due to joins, groupBy, repartition), which is a common performance bottleneck."
+  },
+  {
+    "id": 80,
+    "category": "Productionizing Pipelines",
+    "question": "A data engineer wants to pass a runtime parameter to a Databricks notebook task in a job. Which method is recommended?",
+    "options": [
+      "Hardcode environment-specific values in the notebook",
+      "Use dbutils.widgets to define parameters and pass values via the job's task parameters",
+      "Use environment variables set in the cluster configuration",
+      "Use a configuration Delta table that the notebook reads at startup"
+    ],
+    "correct": 1,
+    "explanation": "dbutils.widgets allows notebooks to accept runtime parameters. When the job is configured with task parameters (key-value pairs), these are passed to the notebook as widget values accessible via dbutils.widgets.get('param_name'). This is the standard pattern for parameterized notebooks."
+  },
+  {
+    "id": 81,
+    "category": "Productionizing Pipelines",
+    "question": "Which Spark configuration improves performance for a job that performs many small, repeated reads from the same Delta table?",
+    "options": [
+      "spark.sql.shuffle.partitions = 1",
+      "spark.databricks.io.cache.enabled = true (Delta cache)",
+      "spark.sql.autoBroadcastJoinThreshold = -1",
+      "spark.sql.adaptive.enabled = false"
+    ],
+    "correct": 1,
+    "explanation": "The Databricks Delta cache (disk cache) stores decompressed data from cloud storage on the local SSD of cluster nodes. Repeated reads of the same data are served from local SSD instead of cloud object storage, significantly reducing latency and cost for repeated access patterns."
+  },
+  {
+    "id": 82,
+    "category": "Data Governance",
+    "question": "A metastore admin wants to delegate the ability to create schemas in a specific catalog to a team lead. Which is the minimum required privilege?",
+    "options": [
+      "USAGE on the catalog",
+      "CREATE SCHEMA on the catalog",
+      "ALL PRIVILEGES on the catalog",
+      "MANAGE on the catalog"
+    ],
+    "correct": 1,
+    "explanation": "CREATE SCHEMA (or CREATE DATABASE) on the catalog grants the ability to create new schemas within it. USAGE alone allows traversal but not creation. Granting ALL PRIVILEGES is overly permissive for this use case."
+  },
+  {
+    "id": 83,
+    "category": "Data Governance",
+    "question": "A data engineer creates a Delta table in Unity Catalog without specifying a LOCATION. Where is the data stored?",
+    "options": [
+      "In DBFS root (/user/hive/warehouse)",
+      "In the Unity Catalog managed storage location associated with the schema or catalog",
+      "In the workspace's default cloud storage bucket",
+      "The table creation fails — LOCATION is required in Unity Catalog"
+    ],
+    "correct": 1,
+    "explanation": "Tables created without a LOCATION in Unity Catalog are managed tables. Their data is stored in the Unity Catalog managed storage location, which is configured at the metastore, catalog, or schema level. Unity Catalog controls both the metadata and data lifecycle."
+  },
+  {
+    "id": 84,
+    "category": "Data Governance",
+    "question": "What is Delta Sharing in Databricks?",
+    "options": [
+      "A feature for sharing Delta tables between workspaces within the same Databricks account",
+      "An open protocol for securely sharing live data with external recipients without copying it",
+      "A replication mechanism for duplicating Delta tables across cloud regions",
+      "A Databricks-proprietary format for exporting Delta tables to CSV"
+    ],
+    "correct": 1,
+    "explanation": "Delta Sharing is an open, vendor-neutral protocol that allows organizations to share live Delta table data with external recipients (including non-Databricks platforms) without copying or moving data. Recipients access data via a REST API using short-lived credentials."
+  },
+  {
+    "id": 85,
+    "category": "Data Governance",
+    "question": "A Unity Catalog group has SELECT on a table. An individual user in that group has SELECT explicitly revoked. Can the user query the table?",
+    "options": [
+      "No — individual REVOKE always overrides group-level grants in Unity Catalog",
+      "Yes — Unity Catalog uses an additive permission model; the group SELECT is still active",
+      "No — once revoked, the user must be re-granted SELECT individually",
+      "Yes — but only if the group has at least 2 other members with SELECT"
+    ],
+    "correct": 1,
+    "explanation": "Unity Catalog uses an additive (allow-list) model with no DENY semantics. REVOKE removes a privilege that was explicitly granted to that principal, but does not create a deny. If SELECT still applies via group membership, the user retains access."
+  },
+  {
+    "id": 86,
+    "category": "Data Governance",
+    "question": "Which Unity Catalog system table provides information about the lineage of a specific column?",
+    "options": [
+      "system.access.audit",
+      "system.information_schema.columns",
+      "system.access.column_lineage",
+      "system.catalog.lineage"
+    ],
+    "correct": 2,
+    "explanation": "system.access.column_lineage (part of Unity Catalog system tables) stores column-level lineage information, tracking how data flows from source columns through transformations to destination columns across tables, notebooks, and pipelines."
+  },
+  {
+    "id": 87,
+    "category": "Data Governance",
+    "question": "A data engineer drops an external table in Unity Catalog. What happens to the underlying data files?",
+    "options": [
+      "The data files are deleted immediately along with the catalog entry",
+      "The data files remain in cloud storage — only the catalog metadata is removed",
+      "The data files are moved to a Unity Catalog recycle bin for 30 days",
+      "The data files are converted to an unregistered Delta table"
+    ],
+    "correct": 1,
+    "explanation": "Dropping an external table in Unity Catalog only removes the metadata entry from the catalog. The underlying data files in cloud storage are not touched. This is the key distinction from managed tables, where both metadata and data are deleted."
+  },
+  {
+    "id": 88,
+    "category": "Development & Ingestion",
+    "question": "A Structured Streaming job writes to a Delta table using outputMode('append'). The source emits late data. How does Structured Streaming handle late records with append mode?",
+    "options": [
+      "Late records are always dropped in append mode",
+      "Late records are processed and appended regardless of lateness",
+      "Late records within the watermark threshold are included; records beyond the watermark may be dropped for stateful operations",
+      "append mode does not support late data — use update mode instead"
+    ],
+    "correct": 2,
+    "explanation": "In append mode with stateful operations (windowed aggregations), a watermark defines the maximum acceptable lateness. Records within the watermark are included in aggregations before results are finalized and appended. Records beyond the watermark are dropped for those windows. For stateless operations (plain append), all records are written regardless."
+  },
+  {
+    "id": 89,
+    "category": "Development & Ingestion",
+    "question": "A data engineer needs to process a stream and apply a complex stateful transformation not supported natively by Structured Streaming. Which API is most appropriate?",
+    "options": [
+      "foreachBatch — process each microbatch as a static DataFrame",
+      "flatMapGroupsWithState — maintain custom state per group across microbatches",
+      "mapPartitions — apply custom logic per partition",
+      "applyInPandas — use Pandas for stateful processing"
+    ],
+    "correct": 1,
+    "explanation": "flatMapGroupsWithState allows engineers to define and update arbitrary custom state per group key across microbatches. It provides full control over state management (timeout, state schema, update logic) for complex stateful operations not covered by built-in window aggregations."
+  },
+  {
+    "id": 90,
+    "category": "Development & Ingestion",
+    "question": "Which Databricks feature allows querying external data sources (e.g., MySQL, Snowflake) directly via SQL without ingesting data first?",
+    "options": [
+      "Auto Loader with JDBC format",
+      "Lakehouse Federation (Foreign Catalogs)",
+      "Delta Sharing receiver setup",
+      "COPY INTO from JDBC source"
+    ],
+    "correct": 1,
+    "explanation": "Lakehouse Federation allows registering external database systems (MySQL, PostgreSQL, Snowflake, etc.) as Foreign Catalogs in Unity Catalog. Users can query the external data directly via SQL without ETL, using Databricks compute to push down filters and execute queries."
+  },
+  {
+    "id": 91,
+    "category": "Data Processing",
+    "question": "A data engineer writes a PySpark UDF that calls an external API. The job has 1M rows. What is the primary performance concern?",
+    "options": [
+      "UDFs cannot call external APIs in Spark",
+      "Each row triggers a separate API call, causing network overhead and serialization cost per row",
+      "UDFs are not parallelized and run on the driver only",
+      "External API calls in UDFs are blocked by Databricks network policies"
+    ],
+    "correct": 1,
+    "explanation": "Python UDFs are called row-by-row, each triggering Python-JVM serialization overhead. Calling an external API per row results in 1M individual HTTP requests, making the job extremely slow and potentially rate-limited. Batch API calls using Pandas UDFs (applyInPandas or pandas_udf) is the correct approach."
+  },
+  {
+    "id": 92,
+    "category": "Data Processing",
+    "question": "What is Liquid Clustering in Delta Lake and when should it be used instead of ZORDER?",
+    "options": [
+      "Liquid Clustering is a streaming optimization; ZORDER is for batch tables",
+      "Liquid Clustering provides incremental, automatic reclustering on write without requiring full OPTIMIZE runs; preferred for frequently updated tables",
+      "Liquid Clustering replaces table partitioning entirely and is required for Unity Catalog tables",
+      "Liquid Clustering only works with string columns; ZORDER works with all types"
+    ],
+    "correct": 1,
+    "explanation": "Liquid Clustering uses Hilbert curve-based clustering and is incrementally maintained — new writes are clustered without requiring a full OPTIMIZE. It is ideal for tables with frequent writes and changing query patterns, as it avoids the full-table rewrite overhead of ZORDER-based OPTIMIZE."
+  },
+  {
+    "id": 93,
+    "category": "Data Processing",
+    "question": "A data engineer partitions a Delta table by a column with 10,000 unique values. What is the likely consequence?",
+    "options": [
+      "Improved query performance due to fine-grained pruning",
+      "Over-partitioning — too many small directories causing metadata overhead and slow queries",
+      "Automatic coalescing of partitions by Delta Lake to reduce overhead",
+      "Unity Catalog prevents creating tables with more than 1,000 partitions"
+    ],
+    "correct": 1,
+    "explanation": "Over-partitioning (high-cardinality partition columns) creates thousands of small directories and files. This causes excessive metadata operations, driver-side overhead for partition listing, and slow query planning. Best practice: partition on low-cardinality columns (e.g., date, region) and use ZORDER or Liquid Clustering for high-cardinality filtering."
+  },
+  {
+    "id": 94,
+    "category": "Data Processing",
+    "question": "A data engineer needs to join a 5TB fact table with a 200MB dimension table. AQE is disabled. What is the most effective optimization?",
+    "options": [
+      "Repartition both tables to the same number of partitions before joining",
+      "Use broadcast(dim_table) hint to force a BroadcastHashJoin",
+      "Add ZORDER on the join key of the fact table",
+      "Increase spark.sql.shuffle.partitions to reduce per-partition size"
+    ],
+    "correct": 1,
+    "explanation": "Broadcasting the 200MB dimension table forces a BroadcastHashJoin, eliminating the shuffle of the 5TB fact table entirely. The dimension table is replicated to every executor, allowing each executor to join locally. This is the single most impactful optimization for large table + small table joins."
+  },
+  {
+    "id": 95,
+    "category": "Data Processing",
+    "question": "A data engineer runs df.explain() and sees 'Exchange hashpartitioning' in the physical plan. What does this indicate?",
+    "options": [
+      "A BroadcastHashJoin is being used",
+      "A shuffle (data redistribution across the network) is required for the next operation",
+      "Delta Lake is repartitioning data for OPTIMIZE",
+      "Spark is using a hash index on the partition column"
+    ],
+    "correct": 1,
+    "explanation": "'Exchange hashpartitioning' in the physical plan indicates a shuffle stage — Spark needs to redistribute data across executors by hashing on a key. This is typical for joins, groupBy, and repartition operations. Shuffles are expensive and should be minimized."
+  },
+  {
+    "id": 96,
+    "category": "Productionizing Pipelines",
+    "question": "A data engineer wants to test a DAB deployment without affecting the production workspace. Which DAB feature supports this?",
+    "options": [
+      "databricks bundle validate --dry-run",
+      "Define a separate 'staging' target in databricks.yml pointing to a staging workspace",
+      "Use the --test flag in databricks bundle deploy",
+      "Run the bundle in Development mode using databricks bundle deploy --mode dev"
+    ],
+    "correct": 1,
+    "explanation": "DABs support multiple targets (dev, staging, prod) in databricks.yml, each pointing to a different workspace with different configurations. Deploying to a staging target exercises the full deployment pipeline against a non-production workspace, validating the bundle before promoting to prod."
+  },
+  {
+    "id": 97,
+    "category": "Productionizing Pipelines",
+    "question": "A Databricks Job runs a notebook that uses spark.sql('DROP TABLE my_table'). The job succeeds but the table was not supposed to be dropped. How can this be prevented in future runs?",
+    "options": [
+      "Use a read-only cluster policy that blocks DDL operations",
+      "Grant only SELECT on the table to the service principal running the job",
+      "Add a data quality constraint to the table preventing drops",
+      "Use a DLT pipeline instead of a notebook to prevent accidental DDL"
+    ],
+    "correct": 1,
+    "explanation": "In Unity Catalog, granting only SELECT (and not MODIFY or ALL PRIVILEGES) to the service principal running the job prevents DDL operations like DROP TABLE. The job's identity only has read access, so the DROP statement will fail with a permission error."
+  },
+  {
+    "id": 98,
+    "category": "Productionizing Pipelines",
+    "question": "What is the recommended way to handle secrets (API keys, passwords) in Databricks notebooks and jobs?",
+    "options": [
+      "Store secrets as notebook variables using %md cells",
+      "Use Databricks Secrets (secret scopes) and retrieve values with dbutils.secrets.get()",
+      "Store secrets in a Delta table with column masking",
+      "Pass secrets as job parameters in plain text"
+    ],
+    "correct": 1,
+    "explanation": "Databricks Secret management (via secret scopes backed by Databricks or Azure Key Vault) stores sensitive values securely. dbutils.secrets.get('scope', 'key') retrieves the value at runtime without exposing it in notebook output or logs. Secret values are automatically redacted in Spark logs."
+  },
+  {
+    "id": 99,
+    "category": "Data Governance",
+    "question": "A workspace is enabled with Unity Catalog. A data engineer writes spark.read.format('delta').load('dbfs:/user/hive/warehouse/my_table'). What is the governance implication?",
+    "options": [
+      "The read is governed by Unity Catalog and requires appropriate table privileges",
+      "Direct DBFS path reads bypass Unity Catalog governance",
+      "DBFS paths are automatically mapped to Unity Catalog tables",
+      "The read fails — direct DBFS access is disabled when Unity Catalog is enabled"
+    ],
+    "correct": 1,
+    "explanation": "Direct DBFS path reads bypass Unity Catalog governance entirely. Unity Catalog only governs access to registered objects (tables, views, volumes). For full governance, data should be accessed via registered Unity Catalog table references (catalog.schema.table), not raw DBFS paths."
+  },
+  {
+    "id": 100,
+    "category": "Data Governance",
+    "question": "A data engineer needs to give an external BI tool access to a Delta table with row-level security (only data for the user's region). Which Unity Catalog feature achieves this transparently without changes to the BI tool queries?",
+    "options": [
+      "Column masks on the region column",
+      "Row filters using the current_user() or session context functions",
+      "A separate view per region shared with each user",
+      "Partition pruning on the region column"
+    ],
+    "correct": 1,
+    "explanation": "Row filters in Unity Catalog apply transparently at query time — the BI tool issues a plain SELECT and Unity Catalog automatically appends the row filter predicate. Using current_user() or a custom attribute function in the filter, each user sees only their authorized rows without any changes to client queries."
   }
 ]
