@@ -3,7 +3,6 @@ import DatabricksLogo from "./Databricks-logo.svg.png";
 
 const questions = [];
 const CORRECT_PASSWORD = "Biricchino100€";
-const MAX_QUESTIONS_PER_SESSION = 25;
 const PASSING_THRESHOLD = 0.78;
 
 const CATEGORY_COLORS = {
@@ -33,8 +32,8 @@ const LogoutButton = ({ onClick }) => (
 export default function DatabricksQuiz() {
   const [parsedQuestions, setParsedQuestions] = useState([]);
 
-  const activeQuestions =
-    parsedQuestions.length > 0 ? parsedQuestions : questions;
+  const allQuestions = parsedQuestions.length > 0 ? parsedQuestions : questions;
+  const activeQuestions = allQuestions.slice(0, questionCount);
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -46,6 +45,7 @@ export default function DatabricksQuiz() {
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState([]);
   const [quizComplete, setQuizComplete] = useState(false);
+  const [questionCount, setQuestionCount] = useState(25);
 
   // Carica la sessione da localStorage
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function DatabricksQuiz() {
         const session = JSON.parse(savedSession);
         setIsAuthenticated(session.isAuthenticated);
         if (session.isAuthenticated) {
-          // Carica difficulty se è settato e il quiz è iniziato
+          if (session.questionCount) setQuestionCount(session.questionCount);
           if (session.difficulty && session.quizStarted) {
             setDifficulty(session.difficulty);
             setQuizStarted(session.quizStarted);
@@ -69,12 +69,10 @@ export default function DatabricksQuiz() {
               setParsedQuestions(session.parsedQuestions);
             }
           } else if (session.difficulty && !session.quizStarted) {
-            // Carica difficulty anche se il quiz non è iniziato ma la difficoltà era stata scelta
             setDifficulty(session.difficulty);
           }
         }
       } catch (e) {
-        // Sessione invalida
         localStorage.removeItem("quizSession");
       }
     }
@@ -86,6 +84,7 @@ export default function DatabricksQuiz() {
       const session = {
         isAuthenticated,
         difficulty,
+        questionCount,
         quizStarted,
         currentQ,
         selected,
@@ -181,9 +180,7 @@ export default function DatabricksQuiz() {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
           }
-          const selected = shuffled.slice(0, MAX_QUESTIONS_PER_SESSION);
-          setParsedQuestions(selected);
-          setMdQuestionCount(data.length);
+          setParsedQuestions(shuffled);
         }
       })
       .catch(() => {
@@ -303,11 +300,27 @@ export default function DatabricksQuiz() {
           <p className="text-gray-400 mb-8">
             In ogni sessione rispondi a 25 domande casuali
           </p>
-          <div className="bg-gray-800 rounded-lg p-6 mb-8">
+          <div className="bg-gray-800 rounded-lg p-6 mb-6">
             <p className="text-gray-300 mb-2">📊 Soglia di superamento: {Math.round(PASSING_THRESHOLD * 100)}%</p>
             <p className="text-gray-400 text-sm">
               I risultati verranno salvati in JSON per il ripasso
             </p>
+          </div>
+          <p className="text-gray-300 mb-3">Numero di domande:</p>
+          <div className="flex gap-3 justify-center mb-8">
+            {[12, 25, 50].map((n) => (
+              <button
+                key={n}
+                onClick={() => setQuestionCount(n)}
+                className={`px-6 py-3 rounded-lg font-bold text-lg transition ${
+                  questionCount === n
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
           </div>
           <button
             onClick={() => setQuizStarted(true)}
