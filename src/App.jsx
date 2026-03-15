@@ -31,13 +31,9 @@ const LogoutButton = ({ onClick }) => (
 
 export default function DatabricksQuiz() {
   const [parsedQuestions, setParsedQuestions] = useState([]);
-
-  const allQuestions = parsedQuestions.length > 0 ? parsedQuestions : questions;
-  const activeQuestions = allQuestions.slice(0, questionCount);
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
-  const [difficulty, setDifficulty] = useState(null); // null, "easy", "hard"
+  const [difficulty, setDifficulty] = useState(null);
   const [quizStarted, setQuizStarted] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -46,6 +42,9 @@ export default function DatabricksQuiz() {
   const [answered, setAnswered] = useState([]);
   const [quizComplete, setQuizComplete] = useState(false);
   const [questionCount, setQuestionCount] = useState(25);
+
+  const allQuestions = parsedQuestions.length > 0 ? parsedQuestions : questions;
+  const activeQuestions = allQuestions.slice(0, questionCount);
 
   // Carica la sessione da localStorage
   useEffect(() => {
