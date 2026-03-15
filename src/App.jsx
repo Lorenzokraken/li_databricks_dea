@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DatabricksLogo from "./Databricks-logo.svg.png";
 
 const questions = [];
-const CORRECT_PASSWORD = "Biricchino100€";
+const CORRECT_PASSWORD = import.meta.env.VITE_QUIZ_PASSWORD;
 const PASSING_THRESHOLD = 0.78;
 
 const CATEGORY_COLORS = {
